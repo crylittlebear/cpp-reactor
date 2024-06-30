@@ -1,14 +1,23 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.15)
 
 project(cpp_reactor)
 
 #设置c++标准
 set(CMAKE_CXX_STANDARD 17)
 
-#定义参与编译的源文件
-aux_source_directory(. SRC_LIST)
+#设置静态库输出路径
+set(LIBPATH ${PROJECT_SOURCE_DIR}/lib)
 
-add_executable(main ${SRC_LIST})   
+#设置头文件路径
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+#输出静态库路径信息
+message("library path: ${LIBPATH}")
 
+# 设置全局库输出路径
+# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBPATH})  # 静态库 (.a)
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBPATH})  # 共享库 (.so)
+
+#设置子目录
+add_subdirectory(src/buffer)
+add_subdirectory(src/common)

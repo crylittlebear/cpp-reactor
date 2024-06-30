@@ -83,6 +83,7 @@ ssize_t Buffer::readFromFd(int fd) {
         writePos_ += capacity_;
         append(buf, len - writable);
     }
+    return len;
 }
 
 ssize_t Buffer::writeToFd(int fd) {
