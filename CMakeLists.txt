@@ -19,5 +19,7 @@ message("library path: ${LIBPATH}")
 # set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBPATH})  # 共享库 (.so)
 
 #设置子目录
-add_subdirectory(src/buffer)
-add_subdirectory(src/common)
+add_subdirectory(src/Buffer)
+add_subdirectory(src/Channel)
+add_subdirectory(src/Common)
+add_subdirectory(src/Poller)
