@@ -1,1 +1,0 @@
-/usr/bin/g++ -fPIC -g -shared -Wl,-soname,libcomm.so -o ../../../lib/libcomm.so CMakeFiles/comm.dir/Logger.cc.o CMakeFiles/comm.dir/TimeStamp.cc.o 
