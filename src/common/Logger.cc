@@ -13,19 +13,20 @@ void Logger::setLogLevel(int level) {
 }
 
 void Logger::log(const std::string& msg) {
-    switch (logLevel_) {
+    std::cout << "(" <<TimeStamp::now().toString() << ")";  
+        switch (logLevel_) {
     case INFO:
-        std::cout << "[INFO] ";
+        std::cout << " [INFO] ";
         break;
     case FATAL:
-        std::cout << "[FATAL] ";
+        std::cout << " [FATAL] ";
         break;
     case ERROR:
-        std::cout << "[ERROR] ";
+        std::cout << " [ERROR] ";
         break;
     case DEBUG:
-        std::cout << "[DEBUG] ";
+        std::cout << " [DEBUG] ";
         break;
     }
-    std::cout << TimeStamp::now().toString() << " : " << msg << std::endl;
+    std::cout << msg << std::endl;
 }

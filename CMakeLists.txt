@@ -16,6 +16,9 @@ set(CMAKE_CXX_STANDARD 17)
 #设置静态库输出路径
 set(LIBPATH ${PROJECT_SOURCE_DIR}/lib)
 
+#设置可执行程序源文件
+aux_source_directory(${PROJECT_SOURCE_DIR}/test SRC)
+
 #设置头文件路径
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -34,7 +37,7 @@ add_subdirectory(src/thread)
 link_directories(${LIBPATH})
 
 #链接库
-link_libraries(tcp_a thread_a poller_a http_a common)
+link_libraries(tcp_a thread_a poller_a http_a common_a)
 
 #生成可执行程序
-add_executable(main main.cc)
+add_executable(main ${SRC})

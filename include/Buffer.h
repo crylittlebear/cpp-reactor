@@ -24,7 +24,7 @@ public:
     char* readPtr() const;
     // 写指针
     char* writePtr() const;
-    // 写数据
+    // 往Buffer中添加数据
     void append(const char* str, size_t len);
     void append(const char* str);
     void append(const std::string& str);

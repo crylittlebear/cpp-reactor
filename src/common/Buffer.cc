@@ -1,4 +1,5 @@
 #include "Buffer.h"
+#include "Logger.h"
 
 #include <sys/socket.h>
 
@@ -59,12 +60,14 @@ void Buffer::makeSpace(size_t size) {
          readPos_ = 0;
          return;
     }
-    char* temp = new char[capacity_ + size];
-    memset(temp, 0, capacity_ + size);
+    // 如果剩余的可写空间小于size
+    int newSize = capacity_ + size;
+    char* temp = new char[newSize];
+    memset(temp, 0, newSize);
     memcpy(temp, data_, writePos_);
     delete[] data_;
     data_ = temp;
-    capacity_ = capacity_ + size;
+    capacity_ = newSize;
 }
 
 ssize_t Buffer::readFromFd(int fd) {
@@ -79,6 +82,7 @@ ssize_t Buffer::readFromFd(int fd) {
     int len = readv(fd, vec, 2);
     if (len < 0) {
         // LOG_ERROR
+        LOG_ERROR("file=Buffer.cc, line=%d, msg: readv() error!", __LINE__);
     } else if (len <= writable) {
         writePos_ += len;
     } else {
@@ -89,6 +93,7 @@ ssize_t Buffer::readFromFd(int fd) {
 }
 
 ssize_t Buffer::writeToFd(int fd) {
+#if 0
     int readable = readableSise();
     if (readable > 0) {
         // auto len = write(fd, readPtr(), readable);
@@ -99,6 +104,18 @@ ssize_t Buffer::writeToFd(int fd) {
         return len;
     }
     return 0;
+#else
+    int totalLen = 0;
+    while (readableSise() > 0) {
+        // auto len = write(fd, readPtr(), readable);
+        auto len = send(fd, readPtr(), readableSise(), MSG_NOSIGNAL);
+        if (len > 0) {
+             readPos_ += len;
+             totalLen += len;
+        }
+    }
+    return totalLen;
+#endif
 }
 
 std::string Buffer::retriveHttpLine() {

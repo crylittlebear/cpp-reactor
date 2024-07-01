@@ -8,8 +8,8 @@ aux_source_directory(./ SRC)
 set(LIBRARY_OUTPUT_PATH ${LIBPATH})
 
 #添加库文件
-add_library(common STATIC ${SRC})
-add_library(comm SHARED ${SRC})
+add_library(common_a STATIC ${SRC})
+add_library(common_s SHARED ${SRC})
 
 
 
