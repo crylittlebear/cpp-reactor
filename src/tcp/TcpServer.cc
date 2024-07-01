@@ -7,6 +7,7 @@
 
 #include <arpa/inet.h>
 #include <functional>
+#include <fcntl.h> 
 
 TcpServer::TcpServer(int threadNum, unsigned short port) {
     threadNum_ = threadNum;
@@ -56,6 +57,10 @@ void TcpServer::setListen() {
 void TcpServer::acceptNewConnection() {
     LOG_INFO("func: %s", __FUNCTION__);
     int cfd = accept(listenFd_, nullptr, nullptr);
+    // 设置套接字为非阻塞模式
+    int flag = fcntl(cfd, F_GETFL);
+    flag |= O_NONBLOCK;
+    fcntl(cfd, F_SETFL, flag);
     if (cfd == -1) {
         LOG_ERROR("func: %s, 接受新连接失败", __FUNCTION__);
     }

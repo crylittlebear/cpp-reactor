@@ -1,12 +1,17 @@
 #include "EventLoop.h"
 #include "EpollPoller.h"
 #include "Channel.h"
+#include "Logger.h"
+
+#include <fcntl.h>
 
 void EventLoop::taskWakeup() {
     const char* msg = "hello world";
     int len = send(socketPair_[0], msg, strlen(msg), 0);
     if (len < 0) {
         // LOG_ERROR
+        LOG_ERROR("file=EventLoop.cc, line=%d, msg: taskWakeup() error!", 
+            __LINE__);
     }    
 }
 
@@ -15,6 +20,8 @@ void EventLoop::readLocalMsg() {
     int len = recv(socketPair_[1], buf, sizeof buf, 0);
     if (len < 0) {
         // LOG_ERROR
+        LOG_ERROR("file=EventLoop.cc, line=%d, msg: readLocalMsg() error!", 
+            __LINE__);
     }
 }
 
@@ -26,10 +33,16 @@ EventLoop::EventLoop(const std::string& name) {
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair_);
     if (ret == -1) {
         // LOG_ERROR
+        LOG_ERROR("file=EventLoop.cc, line=%d, msg: EventLoop() error!", 
+            __LINE__);
     }
     // 创建用于本地通信的Channel
     Channel* channel = new Channel(socketPair_[1], ReadEvent, 
         std::bind(&EventLoop::readLocalMsg, this), nullptr, nullptr);
+    // 设置套接字为非阻塞模式
+    int flag = fcntl(socketPair_[1], F_GETFL);
+    flag |= O_NONBLOCK;
+    fcntl(socketPair_[1], F_SETFL, flag);
     addTask(channel, TYPE_ADD);
 }
 
