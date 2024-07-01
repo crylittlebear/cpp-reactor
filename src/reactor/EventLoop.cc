@@ -1,5 +1,5 @@
-#include "Poller/EventLoop.h"
-#include "Poller/EpollPoller.h"
+#include "EventLoop.h"
+#include "EpollPoller.h"
 #include "Channel.h"
 
 void EventLoop::taskWakeup() {
@@ -111,7 +111,7 @@ int EventLoop::modify(Channel* channel) {
     return 0;
 }
 
-int EventLoop::destroyChannel(Channel* channel) {
+int EventLoop::freeChannel(Channel* channel) {
     // 从映射表中将channel删除
     channelMap_.erase(channel->fd());
     // 关闭channel中保存的文件描述符

@@ -4,6 +4,7 @@
 #include <string>
 #include <assert.h>
 #include <string.h>
+#include <string_view>
 #include <unistd.h>
 #include <stddef.h>
 #include <sys/uio.h>
@@ -32,6 +33,8 @@ public:
     ssize_t readFromFd(int fd);
     // 向文件描述符中写数据
     ssize_t writeToFd(int fd);
+    // 从buffer中获取一个HTTP行
+    std::string retriveHttpLine();
 private:
     void makeSpace(size_t size);
 

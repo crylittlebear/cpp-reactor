@@ -97,3 +97,12 @@ ssize_t Buffer::writeToFd(int fd) {
     }
     return 0;
 }
+
+std::string Buffer::retriveHttpLine() {
+    std::string_view sv(readPtr(), readableSise());
+    auto pos = sv.find("\r\n", 0);
+    std::string res(sv.substr(0, pos));
+    readPos_ += pos;
+    readPos_ += 2;
+    return res;
+}

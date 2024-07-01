@@ -24,7 +24,7 @@ struct ChannelElem {
 
 class EventLoop {
 public:
-    EventLoop(const std::string& name);
+    EventLoop(const std::string& name = "");
     ~EventLoop();
 
     // 唤醒子线程处理相应任务
@@ -40,7 +40,7 @@ public:
     // 处理任务队列中的任务
     int processTasak();
     // 销毁Channel
-    int destroyChannel(Channel* channel);
+    int freeChannel(Channel* channel);
     
     int add(Channel* channel);
     int remove(Channel* channel);
@@ -49,7 +49,7 @@ public:
     //
     const std::unordered_map<int, Channel*>&
     channelMap() const;
-private:
+public:
     // poller
     Poller* poller_;
     // 运行状态

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 
 project(cpp_reactor)
 
+#设置宏
+add_definitions(-DMDEBUG)
+add_definitions(-DMSG_SEND_AUTO)
+
 #设置c++标准
 set(CMAKE_CXX_STANDARD 17)
 
@@ -19,7 +23,12 @@ message("library path: ${LIBPATH}")
 # set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBPATH})  # 共享库 (.so)
 
 #设置子目录
-add_subdirectory(src/Buffer)
-add_subdirectory(src/Channel)
-add_subdirectory(src/Common)
-add_subdirectory(src/Poller)
+add_subdirectory(src/common)
+add_subdirectory(src/http)
+add_subdirectory(src/reactor)
+add_subdirectory(src/tcp)
+add_subdirectory(src/thread)
+
+
+#生成可执行程序
+# add_executable(main testLog.cc)
