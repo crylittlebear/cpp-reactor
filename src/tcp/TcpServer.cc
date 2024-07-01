@@ -16,6 +16,15 @@ TcpServer::TcpServer(int threadNum, unsigned short port) {
     setListen();
 }
 
+TcpServer::~TcpServer() {
+    if (mainLoop_) {
+        delete mainLoop_;
+    }
+    if (pool_) {
+        delete pool_;
+    }
+}
+
 void TcpServer::setListen() {
     // 创建监听套接字
     listenFd_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,6 +54,7 @@ void TcpServer::setListen() {
 }
 
 void TcpServer::acceptNewConnection() {
+    LOG_INFO("func: %s", __FUNCTION__);
     int cfd = accept(listenFd_, nullptr, nullptr);
     if (cfd == -1) {
         LOG_ERROR("func: %s, 接受新连接失败", __FUNCTION__);
@@ -53,7 +63,7 @@ void TcpServer::acceptNewConnection() {
 }
 
 void TcpServer::start() {
-    LOG_FATAL("func: %s, 服务器启动...", __FUNCTION__);
+    LOG_INFO("func: %s, 服务器启动...", __FUNCTION__);
     pool_->start();
     // 初始化一个Channel用于保存监听套接字
     auto func = std::bind(&TcpServer::acceptNewConnection, this);

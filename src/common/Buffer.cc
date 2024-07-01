@@ -1,5 +1,7 @@
 #include "Buffer.h"
 
+#include <sys/socket.h>
+
 Buffer::Buffer(size_t initSize) {
     data_ = new char[initSize];
     readPos_ = 0;
@@ -89,7 +91,8 @@ ssize_t Buffer::readFromFd(int fd) {
 ssize_t Buffer::writeToFd(int fd) {
     int readable = readableSise();
     if (readable > 0) {
-        auto len = write(fd, writePtr(), readable);
+        // auto len = write(fd, readPtr(), readable);
+        auto len = send(fd, readPtr(), readable, MSG_NOSIGNAL);
         if (len > 0) {
              readPos_ += len;
         }

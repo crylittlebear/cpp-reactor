@@ -2,9 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 
 project(cpp_reactor)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+endif()
+
 #设置宏
 add_definitions(-DMDEBUG)
-add_definitions(-DMSG_SEND_AUTO)
+# add_definitions(-DMSG_SEND_AUTO)
 
 #设置c++标准
 set(CMAKE_CXX_STANDARD 17)
@@ -14,9 +18,6 @@ set(LIBPATH ${PROJECT_SOURCE_DIR}/lib)
 
 #设置头文件路径
 include_directories(${PROJECT_SOURCE_DIR}/include)
-
-#输出静态库路径信息
-message("library path: ${LIBPATH}")
 
 # 设置全局库输出路径
 # set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBPATH})  # 静态库 (.a)
@@ -29,6 +30,11 @@ add_subdirectory(src/reactor)
 add_subdirectory(src/tcp)
 add_subdirectory(src/thread)
 
+#设置库目录
+link_directories(${LIBPATH})
+
+#链接库
+link_libraries(tcp_a thread_a poller_a http_a common)
 
 #生成可执行程序
-# add_executable(main testLog.cc)
+add_executable(main main.cc)

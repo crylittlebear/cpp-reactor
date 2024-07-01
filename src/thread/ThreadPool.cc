@@ -27,7 +27,6 @@ void ThreadPool::start() {
         WorkerThread* worker = new WorkerThread(i);
         worker->run();
         threads_.push_back(worker);
-        LOG_DEBUG("成功创建线程,线程名为: %s", worker->getThreadName().c_str());
     }
 }
 

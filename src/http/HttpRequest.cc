@@ -40,11 +40,11 @@ bool HttpRequest::parseRequestLine(Buffer* buf) {
     std::string reqLine = buf->retriveHttpLine();
     LOG_DEBUG("接收到的HTTP请求行为: %s", reqLine.c_str());
     int begin = 0;
-    auto space = reqLine.find_first_of(begin, ' ');
+    auto space = reqLine.find_first_of(' ', begin);
     assert(space != reqLine.npos);
     method_ = reqLine.substr(begin, space - begin);
     begin = space + 1;
-    space = reqLine.find_first_of(begin, ' ');
+    space = reqLine.find_first_of(' ', begin);
     assert(space != reqLine.npos);
     url_ = reqLine.substr(begin, space - begin);
     begin = space + 1;
@@ -61,7 +61,7 @@ bool HttpRequest::parseRequestHeader(Buffer* buf) {
         assert(pos != header.npos);
         std::string key = header.substr(0, pos);
         std::string value = header.substr(pos + 2, header.size() - pos - 2);
-        LOG_DEBUG("header: key = %s, value = %s", key.c_str(), key.c_str());
+        LOG_DEBUG("header: key = %s, value = %s", key.c_str(), value.c_str());
         addHeader(key, value);
     } 
     parseState_ = PARSE_REQ_DONE;
@@ -135,7 +135,7 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     } else {
         // 是文件
         std::string header("Content-type: ");
-        header += getFileType(".html");
+        header += getFileType(file);
         response->addResponseHeader(header);
         header.clear();
         header += "Content-length: ";

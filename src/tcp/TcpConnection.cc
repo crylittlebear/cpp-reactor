@@ -66,7 +66,7 @@ void TcpConnection::processRead() {
 }
 
 void TcpConnection::processWrite() {
-    LOG_DEBUG("开始发送数据了...");
+    // LOG_DEBUG("开始发送数据了...");
     int len = writeBuf_->writeToFd(channel_->fd());
     if (len > 0) {
         // 判断数据是否全部发送

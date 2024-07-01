@@ -2,6 +2,10 @@
 #include "Buffer.h"
 #include "Logger.h"
 
+HttpResponse::HttpResponse() {}
+
+HttpResponse::~HttpResponse() {}
+
 void HttpResponse::setStatusCode(int code) {
     statusCode_ = code;
 }
@@ -15,8 +19,10 @@ void HttpResponse::addResponseHeader(std::string header) {
 }
 
 void HttpResponse::prepareMsg(Buffer* buf, int socket) {
+    LOG_INFO("func = %s", __FUNCTION__);
     std::string responseLine = "HTTP/1.1 ";
-    responseLine = std::to_string(statusCode_) + " ";
+    responseLine += std::to_string(statusCode_);
+    responseLine += " ";
     responseLine += statusMap_.at(statusCode_);
     buf->append(responseLine);
     buf->append("\r\n");
@@ -26,6 +32,8 @@ void HttpResponse::prepareMsg(Buffer* buf, int socket) {
     }   
     // 添加空行
     buf->append("\r\n");
+    //发送数据
+    buf->writeToFd(socket);
     // 发送数据
     sendDataFunc_(fileName_, buf, socket);
 }
