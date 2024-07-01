@@ -2,6 +2,7 @@
 
 #include <string>
 #include <stdint.h>
+#include <time.h>
 
 class TimeStamp {
 public:
