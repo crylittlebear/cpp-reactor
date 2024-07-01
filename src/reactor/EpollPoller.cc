@@ -1,6 +1,7 @@
 #include "EpollPoller.h"
 #include "EventLoop.h"
 #include "Channel.h"
+#include "Logger.h"
 
 const int EpollEventSize = 1024;
 
@@ -37,6 +38,8 @@ int EpollPoller::add(Channel* channel) {
     int ret = epollCtl(channel, EPOLL_CTL_ADD);
     if (ret == -1) {
         // LOG_ERROR
+        LOG_ERROR("file=EpollPoller.cc, line=%d, msg: epoll_ADD() error!", 
+            __LINE__);
     }
     return ret;
 }
@@ -45,6 +48,8 @@ int EpollPoller::remove(Channel* channel) {
     int ret = epollCtl(channel, EPOLL_CTL_DEL);
     if (ret == -1) {
         // LOG_ERROR
+        LOG_ERROR("file=EpollPoller.cc, line=%d, msg: epoll_DEL() error!", 
+            __LINE__);
     }
     return ret;
 }
@@ -53,26 +58,28 @@ int EpollPoller::modify(Channel* channel) {
     int ret = epollCtl(channel, EPOLL_CTL_MOD);
     if (ret == -1) {
         // LOG_ERROR
+        LOG_ERROR("file=EpollPoller.cc, line=%d, msg: epoll_MOD() error!", 
+            __LINE__);
     }
     return 0;
 }
 
 int EpollPoller::poll(EventLoop* evLoop, int timeout) {
-    int numActive = epoll_wait(data_->epfd_, data_->evs_, EpollEventSize, timeout);
+    int numActive = epoll_wait(data_->epfd_, data_->evs_, 
+        EpollEventSize, timeout);
     if (numActive == -1) {
         // LOG_ERROR
+        LOG_ERROR("file=EpollPoller.cc, line=%d, msg: epoll_wait() error!", 
+            __LINE__);
     } else {
         for (int i = 0; i < numActive; ++i) {
             int fd = data_->evs_[i].data.fd;
             int events = data_->evs_[i].events;
-            auto mp = evLoop->channelMap();
-            Channel* channel = mp[fd];
+            // EventLoop中保存有文件描述符到Channel的映射表，因此由EventLoop处理
             if (events & EPOLLIN) { 
-                // 如果到达的是读事件,调用channel中保存的读回调
                 evLoop->handleEvent(fd, ReadEvent);
             }
             if (events & EPOLLOUT) {
-                // 如果到达的是写事件
                 evLoop->handleEvent(fd, WriteEvent);
             }
         }
