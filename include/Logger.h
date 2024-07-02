@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 
+#ifdef MINFO
 #define LOG_INFO(logMsgFormat, ...) \
     do { \
         Logger& logger = Logger::instance(); \
@@ -11,6 +12,9 @@
         snprintf(buf, 1024, logMsgFormat, ##__VA_ARGS__); \
         logger.log(buf); \
     } while (0)
+#else
+#define LOG_INFO(logMsgFormat, ...)
+#endif
 
 #define LOG_FATAL(logMsgFormat, ...) \
     do { \

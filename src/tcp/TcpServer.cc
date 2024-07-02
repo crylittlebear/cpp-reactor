@@ -64,7 +64,9 @@ void TcpServer::acceptNewConnection() {
     if (cfd == -1) {
         LOG_ERROR("func: %s, 接受新连接失败", __FUNCTION__);
     }
-    new TcpConnection(cfd, mainLoop_);
+    // 将这个新连接放到线程池中的线程上运行
+    EventLoop* evLoop = pool_->takeWorkerEventLoop();
+    new TcpConnection(cfd, evLoop);
 }
 
 void TcpServer::start() {

@@ -38,9 +38,10 @@ TcpConnection::~TcpConnection() {
 }
 
 void TcpConnection::processRead() {
+    LOG_DEBUG("TcpConnection::processRead(), threadName: %s", loop_->threadName_.c_str());
     int sock = channel_->fd();
     int len = readBuf_->readFromFd(sock);
-    LOG_DEBUG("接收到的HTTP请求消息为: %s", readBuf_->readPtr());
+    // LOG_DEBUG("接收到的HTTP请求消息为: %s", readBuf_->readPtr());
     if (len > 0) {
     #ifdef MSG_SEND_AUTO
         channel_->writeEnable(true);

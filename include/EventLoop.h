@@ -38,7 +38,7 @@ public:
     // 向任务队列中添加任务
     int addTask(Channel* channel, int type);
     // 处理任务队列中的任务
-    int processTasak();
+    int processTask();
     // 销毁Channel
     int freeChannel(Channel* channel);
     

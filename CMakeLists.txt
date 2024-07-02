@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.15)
 
 project(cpp_reactor)
 
+#设置构建模式为DEBUG
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
 endif()
 
 #设置宏
 add_definitions(-DMDEBUG)
+# add_definitions(-DMINFO)
 # add_definitions(-DMSG_SEND_AUTO)
 
 #设置c++标准

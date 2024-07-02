@@ -5,26 +5,6 @@
 
 #include <fcntl.h>
 
-void EventLoop::taskWakeup() {
-    const char* msg = "hello world";
-    int len = send(socketPair_[0], msg, strlen(msg), 0);
-    if (len < 0) {
-        // LOG_ERROR
-        LOG_ERROR("file=EventLoop.cc, line=%d, msg: taskWakeup() error!", 
-            __LINE__);
-    }    
-}
-
-void EventLoop::readLocalMsg() {
-    char buf[64];
-    int len = recv(socketPair_[1], buf, sizeof buf, 0);
-    if (len < 0) {
-        // LOG_ERROR
-        LOG_ERROR("file=EventLoop.cc, line=%d, msg: readLocalMsg() error!", 
-            __LINE__);
-    }
-}
-
 EventLoop::EventLoop(const std::string& name) {
     isQuit_ = false;
     threadId_ = std::this_thread::get_id();
@@ -56,7 +36,7 @@ int EventLoop::loop() {
     assert(isQuit_ != true);
     while (!isQuit_) {
         poller_->poll(this, 3);
-        processTasak();
+        processTask();
     }
     return 0;
 }
@@ -65,33 +45,36 @@ int EventLoop::handleEvent(int fd, int event) {
     if (fd < 0) return -1;
     Channel* channel = channelMap_[fd];
     assert(channel->fd() == fd);
-    if (event & ReadEvent && channel->readCallback_ != nullptr) {
+    if ((event & ReadEvent) && channel->readCallback_ != nullptr) {
         channel->readCallback_();
     }
-    if (event & WriteEvent && channel->writeCallback_ != nullptr) {
+    if ((event & WriteEvent) && channel->writeCallback_ != nullptr) {
         channel->writeCallback_();
     }
     return 0;
 }
 
 int EventLoop::addTask(Channel* channel, int type) {
-    mutex_.lock();
-    ChannelElem* elem = new ChannelElem(channel, type);
-    taskQue_.push(elem);
-    mutex_.unlock();
-    // 添加任务后需要唤醒响应的线程处理任务
-    if (threadId_ == std::this_thread::get_id()) {
-        // 添加任务的线程是子线程
-        processTasak();
-    } else {
-        // 处理任务
-        taskWakeup();
+    {
+        std::unique_lock<std::mutex> locker(mutex_);
+        ChannelElem* elem = new ChannelElem(channel, type);
+        taskQue_.push(elem);
     }
+    // // 添加任务后需要唤醒响应的线程处理任务
+    // if (threadId_ == std::this_thread::get_id()) {
+    //     // 添加任务的线程是子线程
+    //     processTask();
+    // } else {
+    //     // 处理任务
+    //     taskWakeup();
+    // }
+    taskWakeup();
+    processTask();
     return 0;
 }
 
-int EventLoop::processTasak() {
-    mutex_.lock();
+int EventLoop::processTask() {
+    std::unique_lock<std::mutex> locker(mutex_);
     while (!taskQue_.empty()) {
         auto elem = taskQue_.front();
         if (elem->type_ == TYPE_ADD) {
@@ -104,7 +87,6 @@ int EventLoop::processTasak() {
         taskQue_.pop();
         delete elem;
     }
-    mutex_.unlock();
     return 0;
 }
 
@@ -137,4 +119,24 @@ int EventLoop::freeChannel(Channel* channel) {
 const std::unordered_map<int, Channel*>&
 EventLoop::channelMap() const {
     return channelMap_;
+}
+
+void EventLoop::taskWakeup() {
+    const char* msg = "hello world";
+    int len = send(socketPair_[0], msg, strlen(msg), 0);
+    if (len < 0) {
+        // LOG_ERROR
+        LOG_ERROR("file=EventLoop.cc, line=%d, msg: taskWakeup() error!", 
+            __LINE__);
+    }    
+}
+
+void EventLoop::readLocalMsg() {
+    char buf[64];
+    int len = recv(socketPair_[1], buf, sizeof buf, 0);
+    if (len < 0) {
+        // LOG_ERROR
+        LOG_ERROR("file=EventLoop.cc, line=%d, msg: readLocalMsg() error!", 
+            __LINE__);
+    }
 }

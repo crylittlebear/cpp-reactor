@@ -61,7 +61,7 @@ bool HttpRequest::parseRequestHeader(Buffer* buf) {
         assert(pos != header.npos);
         std::string key = header.substr(0, pos);
         std::string value = header.substr(pos + 2, header.size() - pos - 2);
-        LOG_DEBUG("header: key = %s, value = %s", key.c_str(), value.c_str());
+        // LOG_DEBUG("header: key = %s, value = %s", key.c_str(), value.c_str());
         addHeader(key, value);
     } 
     parseState_ = PARSE_REQ_DONE;
@@ -260,15 +260,15 @@ void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
 				 name.c_str(), name.c_str(), entry.file_size());            
         }
         sendBuf->append(buf);
-        std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
-        std::cout << sv << std::endl;
+        // std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
+        // std::cout << sv << std::endl;
         sendBuf->writeToFd(socket);
         memset(buf, 0, sizeof(buf));
     }
     sprintf(buf, "</table></body></html>");
     sendBuf->append(buf);
-    std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
-    std::cout << sv << std::endl;
+    // std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
+    // std::cout << sv << std::endl;
     sendBuf->writeToFd(socket);
 }
 
