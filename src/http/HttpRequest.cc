@@ -35,6 +35,7 @@ const std::string HttpRequest::getHeader(const std::string& key) {
 
 bool HttpRequest::parseRequestLine(Buffer* buf) {
     LOG_INFO("func = %s", __FUNCTION__);
+    LOG_DEBUG("HttpRequest::parseRequestLine()");
     assert(parseState_ == PARSE_REQ_LINE);
     // 从buf中获取与一个HTTP行
     std::string reqLine = buf->retriveHttpLine();
@@ -55,6 +56,7 @@ bool HttpRequest::parseRequestLine(Buffer* buf) {
 
 bool HttpRequest::parseRequestHeader(Buffer* buf) {
     LOG_INFO("func = %s", __FUNCTION__);
+    LOG_DEBUG("HttpRequest::parseRequestHeader()");
     std::string header;
     while ((header = buf->retriveHttpLine()) != "") {
         auto pos = header.find(": ", 0);
@@ -73,6 +75,7 @@ bool HttpRequest::parseHttpRequest(Buffer* readBuf,
                                    Buffer* writeBuf,
                                    int socket) {
     LOG_INFO("func = %s", __FUNCTION__);
+    LOG_DEBUG("HttpRequest::parseHttpRequest()");
     assert(parseState_ == PARSE_REQ_LINE);
     bool flag = false;
     while (parseState_ != PARSE_REQ_DONE) {
@@ -99,6 +102,7 @@ bool HttpRequest::parseHttpRequest(Buffer* readBuf,
 
 bool HttpRequest::processHttpRequest(HttpResponse* response) {
     LOG_INFO("func = %s", __FUNCTION__);
+    LOG_DEBUG("HttpRequest::processHttpRequest()");
     assert(method_ == "get" || method_ == "GET");
     // 解码URL,防止中文乱码
     decodeMsg(url_);
@@ -202,28 +206,24 @@ const std::string HttpRequest::getFileType(const std::string name) {
 }
 
 void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
+    LOG_DEBUG("HttpRequest::sendFile()");
     // 1. 打开文件
     int fd = open(fileName.data(), O_RDONLY);
     assert(fd > 0);
 #if 1
-    while (1)
-    {
-        char buf[1024];
-        int len = read(fd, buf, sizeof buf);
-        if (len > 0)
-        {
+    while (1) {
+        char* buf = new char[4096];
+        int len = read(fd, buf, 4096);
+        if (len > 0) {
             // send(cfd, buf, len, 0);
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
             sendBuf->writeToFd(socket);
+            delete buf;
 #endif
-        }
-        else if (len == 0)
-        {
+        } else if (len == 0) {
             break;
-        }
-        else
-        {
+        } else {
             LOG_ERROR("func = %s, 读取文件失败", __FUNCTION__);
             close(fd);
             return;
@@ -246,6 +246,7 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
     close(fd);
 }
 void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
+    LOG_DEBUG("HttpRequest::sendDir()");
 	char buf[4096] = {0};
 	sprintf(buf, "<html><head><title>%s</title></head><body><table>", dirName.c_str());
     for (const auto& entry : std::filesystem::directory_iterator(dirName)) {

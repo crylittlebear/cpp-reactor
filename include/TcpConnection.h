@@ -5,12 +5,13 @@
 class Buffer;
 class Channel;
 class EventLoop;
+class WorkerThread;
 class HttpRequest;
 class HttpResponse;
 
 class TcpConnection {
 public:
-    TcpConnection(int fd, EventLoop* evLoop);
+    TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread);
     ~TcpConnection();
 
     void processRead();
@@ -22,6 +23,7 @@ private:
     Buffer* writeBuf_;
     EventLoop* loop_;
     Channel* channel_;
+    WorkerThread* workerThread_;
     // http
     HttpRequest* request_;
     HttpResponse* response_;

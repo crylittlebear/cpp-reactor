@@ -4,14 +4,16 @@
 #include "Channel.h"
 #include "HttpRequest.h"
 #include "HttpResponse.h"
+#include "WorkerThread.h"
 #include "Logger.h"
 
 #include <functional>
 
 const int InitBufSize = 10240;
 
-TcpConnection::TcpConnection(int fd, EventLoop* evLoop) {
+TcpConnection::TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread) {
     loop_ = evLoop;
+    workerThread_ = thread;
     readBuf_ = new Buffer(InitBufSize);
     writeBuf_ = new Buffer(InitBufSize);
     request_ = new HttpRequest;
@@ -35,6 +37,7 @@ TcpConnection::~TcpConnection() {
         loop_->freeChannel(channel_);
     }
     LOG_DEBUG("Tcp连接: %s 已断开", name_.c_str());
+    LOG_DEBUG("============================================");
 }
 
 void TcpConnection::processRead() {
@@ -67,7 +70,7 @@ void TcpConnection::processRead() {
 }
 
 void TcpConnection::processWrite() {
-    // LOG_DEBUG("开始发送数据了...");
+    LOG_DEBUG("开始发送数据了...");
     int len = writeBuf_->writeToFd(channel_->fd());
     if (len > 0) {
         // 判断数据是否全部发送
@@ -80,5 +83,8 @@ void TcpConnection::processWrite() {
 }
 
 void TcpConnection::processDestroy() {
-    this->~TcpConnection();
+    LOG_DEBUG("TcpConnection::processDestroy(), threadName: %s", loop_->threadName_.c_str());
+    int fd = channel_->fd();
+    (workerThread_->connections_)[fd]->~TcpConnection();
+    (workerThread_->connections_).erase(fd);
 }

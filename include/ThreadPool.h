@@ -19,6 +19,8 @@ public:
      * 用于向该线程提交任务
     */
     EventLoop* takeWorkerEventLoop();
+    // 从线程池中取出一个线程
+    WorkerThread* takeWorkerThread();
 private:
     bool isRuning_;
     int threadSize_;

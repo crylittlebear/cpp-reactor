@@ -20,6 +20,7 @@ void HttpResponse::addResponseHeader(std::string header) {
 
 void HttpResponse::prepareMsg(Buffer* buf, int socket) {
     LOG_INFO("func = %s", __FUNCTION__);
+    LOG_DEBUG("HttpResponse::prepareMsg()");
     std::string responseLine = "HTTP/1.1 ";
     responseLine += std::to_string(statusCode_);
     responseLine += " ";

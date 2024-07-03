@@ -40,6 +40,17 @@ EventLoop* ThreadPool::takeWorkerEventLoop() {
         evLoop = threads_[threadIndex_]->getEventLoop();
         threadIndex_ = ++threadIndex_ % threadSize_;
     }
-    LOG_DEBUG("从线程池中取出线程: %s", evLoop->threadName_.c_str());
+    LOG_DEBUG("从线程池中取出线程: %s 的EventLoop", evLoop->threadName_.c_str());
     return evLoop; 
+}
+
+WorkerThread* ThreadPool::takeWorkerThread() {
+    assert(isRuning_);
+    WorkerThread* worker = nullptr;
+    if (threadSize_ > 0) {
+        worker = threads_[threadIndex_];
+        threadIndex_ = ++threadIndex_ % threadSize_;
+    }
+    LOG_DEBUG("从线程池中取出线程: %s", worker->getEventLoop()->threadName_.c_str());
+    return worker;
 }

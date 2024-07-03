@@ -3,6 +3,8 @@
 #include "Channel.h"
 #include "Logger.h"
 
+#include <errno.h>
+
 const int EpollEventSize = 1024;
 
 EpollPoller::EpollPoller() {
@@ -67,10 +69,10 @@ int EpollPoller::modify(Channel* channel) {
 int EpollPoller::poll(EventLoop* evLoop, int timeout) {
     int numActive = epoll_wait(data_->epfd_, data_->evs_, 
         EpollEventSize, timeout);
-    if (numActive == -1) {
+    if (numActive == -1 && errno != EINTR) {
         // LOG_ERROR
-        LOG_ERROR("file=EpollPoller.cc, line=%d, msg: epoll_wait() error!", 
-            __LINE__);
+        LOG_ERROR("file=EpollPoller.cc, line=%d, errno: %d, msg: epoll_wait() error!", 
+            __LINE__, errno);
     } else {
         for (int i = 0; i < numActive; ++i) {
             int fd = data_->evs_[i].data.fd;

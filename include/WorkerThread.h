@@ -3,9 +3,11 @@
 #include <thread>
 #include <string>
 #include <mutex>
+#include <unordered_map>
 #include <condition_variable>
 
 class EventLoop;
+class TcpConnection;
 
 class WorkerThread {
 public:
@@ -15,8 +17,10 @@ public:
     void run();
     void workFunc();
     EventLoop* getEventLoop() const;
-
     std::string getThreadName() const;
+
+public:
+    std::unordered_map<int, TcpConnection*> connections_;
 
 private:
     std::thread* thread_;

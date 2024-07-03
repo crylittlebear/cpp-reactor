@@ -59,6 +59,7 @@ int EventLoop::addTask(Channel* channel, int type) {
         std::unique_lock<std::mutex> locker(mutex_);
         ChannelElem* elem = new ChannelElem(channel, type);
         taskQue_.push(elem);
+        taskWakeup();
     }
     // // 添加任务后需要唤醒响应的线程处理任务
     // if (threadId_ == std::this_thread::get_id()) {
@@ -68,8 +69,8 @@ int EventLoop::addTask(Channel* channel, int type) {
     //     // 处理任务
     //     taskWakeup();
     // }
-    taskWakeup();
-    processTask();
+    // taskWakeup();
+    // processTask();
     return 0;
 }
 
@@ -98,6 +99,9 @@ int EventLoop::add(Channel* channel) {
 
 int EventLoop::remove(Channel* channel) {
     poller_->remove(channel);
+    if (channel->destroyCallback_) {
+        channel->destroyCallback_();
+    }
     return 0;
 }
 
@@ -107,6 +111,7 @@ int EventLoop::modify(Channel* channel) {
 }
 
 int EventLoop::freeChannel(Channel* channel) {
+    LOG_DEBUG("free channel");
     // 从映射表中将channel删除
     channelMap_.erase(channel->fd());
     // 关闭channel中保存的文件描述符
@@ -138,5 +143,9 @@ void EventLoop::readLocalMsg() {
         // LOG_ERROR
         LOG_ERROR("file=EventLoop.cc, line=%d, msg: readLocalMsg() error!", 
             __LINE__);
+        return;
+    }
+    if (len > 0) {
+        processTask();
     }
 }
