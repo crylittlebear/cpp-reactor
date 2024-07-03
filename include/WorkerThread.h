@@ -23,8 +23,8 @@ public:
     std::unordered_map<int, TcpConnection*> connections_;
 
 private:
-    std::thread* thread_;
     EventLoop* loop_;
+    std::thread* thread_;
     std::thread::id threadId_;
     std::string threadName_;
     std::mutex mutex_;

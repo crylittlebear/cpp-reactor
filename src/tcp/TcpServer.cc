@@ -62,23 +62,26 @@ void TcpServer::setListen() {
 void TcpServer::acceptNewConnection() {
     LOG_INFO("func: %s", __FUNCTION__);
     int cfd = accept(listenFd_, nullptr, nullptr);
+    if (cfd == -1) {
+        LOG_ERROR("func: %s, 接受新连接失败", __FUNCTION__);
+    }
     // 设置套接字为非阻塞模式
     int flag = fcntl(cfd, F_GETFL);
     flag |= O_NONBLOCK;
     fcntl(cfd, F_SETFL, flag);
-    if (cfd == -1) {
-        LOG_ERROR("func: %s, 接受新连接失败", __FUNCTION__);
-    }
+    
     LOG_DEBUG("TcpServer::acceptNewConnection(), threadName: %s, fd: %d", 
-    mainLoop_->threadName_.c_str(), cfd);
+        mainLoop_->threadName_.c_str(), cfd);
     // 将这个新连接放到线程池中的线程上运行
     // EventLoop* evLoop = pool_->takeWorkerEventLoop();
     // new TcpConnection(cfd, evLoop);
 
     WorkerThread* worker = pool_->takeWorkerThread();
     if (worker->connections_.find(cfd) == worker->connections_.end()) {
+        // 如果工作线程中没有保存cfd相应的TCP链接
         (worker->connections_)[cfd] = new TcpConnection(cfd, worker->getEventLoop(), worker);
-        LOG_DEBUG("Add new TcpConnection: %d", cfd);
+        LOG_DEBUG("Add new TcpConnection: %d to thread %s", cfd, 
+            worker->getEventLoop()->threadName_.c_str());
     }
 }
 

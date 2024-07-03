@@ -18,6 +18,7 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::start() {
+    LOG_DEBUG("ThreadPool::start(), 开启线程池");
     assert(!isRuning_);
     if (mainLoop_->threadId_ != std::this_thread::get_id()) {
         LOG_FATAL("func = %s, 线程池的运行线程与主线程不符", __FUNCTION__);
@@ -49,8 +50,8 @@ WorkerThread* ThreadPool::takeWorkerThread() {
     WorkerThread* worker = nullptr;
     if (threadSize_ > 0) {
         worker = threads_[threadIndex_];
+        LOG_DEBUG("从线程池中取出线程: %s", worker->getEventLoop()->threadName_.c_str());
         threadIndex_ = ++threadIndex_ % threadSize_;
     }
-    LOG_DEBUG("从线程池中取出线程: %s", worker->getEventLoop()->threadName_.c_str());
     return worker;
 }

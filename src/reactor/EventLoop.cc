@@ -35,7 +35,7 @@ EventLoop::~EventLoop() {
 int EventLoop::loop() {
     assert(isQuit_ != true);
     while (!isQuit_) {
-        poller_->poll(this, 3);
+        poller_->poll(this, 2000);
         processTask();
     }
     return 0;

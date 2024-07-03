@@ -116,37 +116,24 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     int ret = stat(file.c_str(), &st);
     if (ret == -1) {
         // 文件不存在
-        response->setFileName("404.html");
-        response->setStatusCode(NotFound);
-        std::string header("Content-type: ");
-        header += getFileType(".html");
-        response->addResponseHeader(header);
         auto sendFunc = std::bind(&HttpRequest::sendFile, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-        response->sendDataFunc_ = sendFunc;
+        response->fillResponseMembers("404.html", NotFound, getFileType("404.html"), 
+            sendFunc);
         return true;
     }
     // 文件存在
-    response->setFileName(file);
-    response->setStatusCode(OK);
     if (S_ISDIR(st.st_mode)) {
         // 是文件夹
-        std::string header("Content-type: ");
-        header += getFileType(".html");
-        response->addResponseHeader(header);
-        response->sendDataFunc_ = std::bind(&HttpRequest::sendDir, this,
+        auto sendFunc = std::bind(&HttpRequest::sendDir, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        response->fillResponseMembers(file, OK, getFileType(".html"), sendFunc);
     } else {
         // 是文件
-        std::string header("Content-type: ");
-        header += getFileType(file);
-        response->addResponseHeader(header);
-        header.clear();
-        header += "Content-length: ";
-        header += std::to_string(st.st_size);
-        response->addResponseHeader(header);
-        response->sendDataFunc_ = std::bind(&HttpRequest::sendFile, this,
+        auto sendFunc = std::bind(&HttpRequest::sendFile, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        response->fillResponseMembers(file, OK, getFileType(file), sendFunc);
+        response->addResponseHeader("Content-length", std::to_string(st.st_size));
     }
     return true;
 }
@@ -154,11 +141,8 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
 void HttpRequest::decodeMsg(std::string& msg) {
     int index = 0;
     for (int i = 0; i < msg.size(); ++i) {
-        if (msg[i] == '%') {    
-            int sum = 0;
-            sum += hexToDec(msg[i + 1]) * 16;
-            sum += hexToDec(msg[i + 2]);
-            msg[index++] = sum;
+        if (msg[i] == '%') {
+            msg[index++] = hexToDec(msg[i + 1]) * 16 + hexToDec(msg[i + 2]);
             i += 2;
         } else {
             msg[index++] = msg[i];
@@ -233,12 +217,10 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
     off_t offset = 0;
     int size = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
-    while (offset < size)
-    {
+    while (offset < size) {
         int ret = sendfile(cfd, fd, &offset, size - offset);
         printf("ret value: %d\n", ret);
-        if (ret == -1 && errno == EAGAIN)
-        {
+        if (ret == -1 && errno == EAGAIN) {
             printf("没数据...\n");
         }
     }
@@ -261,15 +243,11 @@ void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
 				 name.c_str(), name.c_str(), entry.file_size());            
         }
         sendBuf->append(buf);
-        // std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
-        // std::cout << sv << std::endl;
         sendBuf->writeToFd(socket);
         memset(buf, 0, sizeof(buf));
     }
     sprintf(buf, "</table></body></html>");
     sendBuf->append(buf);
-    // std::string_view sv(sendBuf->readPtr(), sendBuf->readableSise());
-    // std::cout << sv << std::endl;
     sendBuf->writeToFd(socket);
 }
 

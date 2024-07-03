@@ -20,8 +20,7 @@ WorkerThread::~WorkerThread() {
 
 void WorkerThread::workFunc() {
     loop_ = new EventLoop(threadName_);
-    cond_.notify_all();
-    LOG_DEBUG("成功创建线程,线程名为: %s", threadName_.c_str());
+    LOG_DEBUG("线程: %s 开始运行...",  threadName_.c_str());
     loop_->loop();
 }
 
