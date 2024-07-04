@@ -37,6 +37,7 @@ int PollPoller::add(Channel* channel) {
             break;
         }
     }
+    return 0;
 }
 
 int PollPoller::remove(Channel* channel) {
@@ -48,6 +49,7 @@ int PollPoller::remove(Channel* channel) {
             break;
         }
     }
+    return 0;
 }
 
 int PollPoller::modify(Channel* channel) {
@@ -66,6 +68,7 @@ int PollPoller::modify(Channel* channel) {
             break;
         }
     }
+    return 0;
 }
 
 int PollPoller::dispatch(EventLoop* evLoop, int timeout) {
