@@ -30,10 +30,11 @@ int PollPoller::add(Channel* channel) {
         events |= POLLOUT;
     }
     for (int i = 0; i < PollFdSize; ++i) {
+        int fd = channel->fd();
         if (fds_[i].fd == -1) {
-            fds_[i].fd = channel->fd();
+            fds_[i].fd = fd;
             fds_[i].events = events;
-            maxfd_ = channel->fd() > maxfd_ ? channel->fd() : maxfd_;
+            maxfd_ = fd > maxfd_ ? fd : maxfd_;
             break;
         }
     }
@@ -41,8 +42,9 @@ int PollPoller::add(Channel* channel) {
 }
 
 int PollPoller::remove(Channel* channel) {
+    int fd = channel->fd();
     for (int i = 0; i <= maxfd_; ++i) {
-        if (fds_[i].fd == channel->fd()) {
+        if (fds_[i].fd == fd) {
             fds_[i].fd = -1;
             fds_[i].events = 0;
             fds_[i].revents = 0;
@@ -53,8 +55,9 @@ int PollPoller::remove(Channel* channel) {
 }
 
 int PollPoller::modify(Channel* channel) {
+    int fd = channel->fd();
     for (int i = 0; i <= maxfd_; ++i) {
-        if (fds_[i].fd == channel->fd()) {
+        if (fds_[i].fd == fd) {
             if (channel->events() & ReadEvent) {
                 fds_[i].events |= POLLIN;
             } else {
