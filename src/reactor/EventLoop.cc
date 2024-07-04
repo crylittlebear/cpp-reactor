@@ -1,5 +1,6 @@
 #include "EventLoop.h"
 #include "EpollPoller.h"
+#include "SelectPoller.h"
 #include "Channel.h"
 #include "Logger.h"
 
@@ -9,7 +10,7 @@ EventLoop::EventLoop(const std::string& name) {
     isQuit_ = false;
     threadId_ = std::this_thread::get_id();
     threadName_ = name == ""? "MainThread" : name;
-    poller_ = new EpollPoller;
+    poller_ = new SelectPoller;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair_);
     if (ret == -1) {
         // LOG_ERROR
@@ -35,7 +36,7 @@ EventLoop::~EventLoop() {
 int EventLoop::loop() {
     assert(isQuit_ != true);
     while (!isQuit_) {
-        poller_->poll(this, 2000);
+        poller_->poll(this, 2);
         processTask();
     }
     return 0;

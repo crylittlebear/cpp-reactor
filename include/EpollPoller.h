@@ -4,12 +4,6 @@
 
 #include "Poller.h"
 
-struct EpollData {
-    EpollData() : epfd_(-1), evs_(nullptr) {}
-    int epfd_;
-    struct epoll_event* evs_;
-};
-
 class Channel;
 class EventLoop;
 
@@ -30,5 +24,6 @@ public:
     virtual int poll(EventLoop* evLoop, int timeout) override;
 
 private:
-    EpollData* data_;
+    int epfd_;
+    epoll_event* evs_;
 };

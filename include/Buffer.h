@@ -33,6 +33,7 @@ public:
     std::string retriveHttpLine();
     // 打印Buffer中的待读内容
     void print();
+    
 private:
     // 分配size大小的可写空间
     void makeSpace(size_t size);

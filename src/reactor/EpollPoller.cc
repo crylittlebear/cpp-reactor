@@ -7,18 +7,14 @@
 
 const int EpollEventSize = 1024;
 
-EpollPoller::EpollPoller() {
-    data_ = new EpollData;
-    data_->epfd_ = epoll_create1(EPOLL_CLOEXEC);
-    data_->evs_ = new epoll_event[EpollEventSize];
+EpollPoller::EpollPoller() {    
+    epfd_ = epoll_create1(EPOLL_CLOEXEC);
+    evs_ = new epoll_event[EpollEventSize];
 }
 
 EpollPoller::~EpollPoller() {
-    if (data_) {
-        if (data_->evs_) {
-            delete[] data_->evs_;
-        }
-        delete data_;
+    if (evs_ != nullptr) {
+        delete[] evs_;
     }
 }
 
@@ -33,7 +29,7 @@ int EpollPoller::epollCtl(Channel* channel, int op) {
         events |= EPOLLOUT;
     }
     ev.events = events;
-    return epoll_ctl(data_->epfd_, op, channel->fd(), &ev);
+    return epoll_ctl(epfd_, op, channel->fd(), &ev);
 }
 
 int EpollPoller::add(Channel* channel) {
@@ -67,16 +63,14 @@ int EpollPoller::modify(Channel* channel) {
 }
 
 int EpollPoller::poll(EventLoop* evLoop, int timeout) {
-    int numActive = epoll_wait(data_->epfd_, data_->evs_, 
-        EpollEventSize, timeout);
+    int numActive = epoll_wait(epfd_, evs_, EpollEventSize, timeout);
     if (numActive == -1 && errno != EINTR) {
-        // LOG_ERROR
         LOG_ERROR("file=EpollPoller.cc, line=%d, errno: %d, msg: epoll_wait() error!", 
             __LINE__, errno);
     } else {
         for (int i = 0; i < numActive; ++i) {
-            int fd = data_->evs_[i].data.fd;
-            int events = data_->evs_[i].events;
+            int fd = evs_[i].data.fd;
+            int events = evs_[i].events;
             // EventLoop中保存有文件描述符到Channel的映射表，因此由EventLoop处理
             if (events & EPOLLIN) { 
                 evLoop->handleEvent(fd, ReadEvent);
