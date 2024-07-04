@@ -20,10 +20,6 @@ public:
     size_t writableSize() const;
     // 可读取字节数
     size_t readableSise() const;
-    // 读指针
-    char* readPtr() const;
-    // 写指针
-    char* writePtr() const;
     // 往Buffer中添加数据
     void append(const char* str, size_t len);
     void append(const char* str);
@@ -35,8 +31,15 @@ public:
     ssize_t writeToFd(int fd);
     // 从buffer中获取一个HTTP行
     std::string retriveHttpLine();
+    // 打印Buffer中的待读内容
+    void print();
 private:
+    // 分配size大小的可写空间
     void makeSpace(size_t size);
+    // 读指针
+    const char* readPtr() const;
+    // 写指针
+    char* writePtr();
 
 private:
     char* data_;

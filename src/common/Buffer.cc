@@ -27,9 +27,9 @@ size_t Buffer::writableSize() const {
     return capacity_ - writePos_;
 }
 
-char* Buffer::readPtr() const { return data_ + readPos_; }
+const char* Buffer::readPtr() const { return data_ + readPos_; }
 
-char* Buffer::writePtr() const { return data_ + writePos_; }
+char* Buffer::writePtr() { return data_ + writePos_; }
 
 void Buffer::append(const char* str, size_t len) {
     makeSpace(len);
@@ -61,7 +61,7 @@ void Buffer::makeSpace(size_t size) {
          return;
     }
     // 如果剩余的可写空间小于size
-    int newSize = capacity_ + size;
+    std::size_t newSize = capacity_ + size;
     char* temp = new char[newSize];
     memset(temp, 0, newSize);
     memcpy(temp, data_, writePos_);
@@ -93,21 +93,8 @@ ssize_t Buffer::readFromFd(int fd) {
 }
 
 ssize_t Buffer::writeToFd(int fd) {
-#if 0
-    int readable = readableSise();
-    if (readable > 0) {
-        // auto len = write(fd, readPtr(), readable);
-        auto len = send(fd, readPtr(), readable, MSG_NOSIGNAL);
-        if (len > 0) {
-             readPos_ += len;
-        }
-        return len;
-    }
-    return 0;
-#else
     int totalLen = 0;
     while (readableSise() > 0) {
-        // auto len = write(fd, readPtr(), readable);
         auto len = send(fd, readPtr(), readableSise(), MSG_NOSIGNAL);
         if (len > 0) {
              readPos_ += len;
@@ -115,14 +102,18 @@ ssize_t Buffer::writeToFd(int fd) {
         }
     }
     return totalLen;
-#endif
 }
 
 std::string Buffer::retriveHttpLine() {
     std::string_view sv(readPtr(), readableSise());
     auto pos = sv.find("\r\n", 0);
-    std::string res(sv.substr(0, pos));
+    if (pos == sv.npos) { return ""; }
     readPos_ += pos;
     readPos_ += 2;
-    return res;
+    return std::string(sv.substr(0, pos));
+}
+
+void Buffer::print() {
+    std::string_view sv(readPtr(), readableSise());
+    std::cout << sv << std::endl;
 }

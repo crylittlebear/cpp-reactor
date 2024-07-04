@@ -12,7 +12,10 @@
 
 const int InitBufSize = 10240;
 
-TcpConnection::TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread, ThreadPool* pool) {
+TcpConnection::TcpConnection(int fd, 
+                             EventLoop* evLoop, 
+                             WorkerThread* thread, 
+                             ThreadPool* pool) {
     loop_ = evLoop;
     pool_ = pool;
     workerThread_ = thread;
@@ -38,7 +41,7 @@ TcpConnection::~TcpConnection() {
         delete response_;
         loop_->freeChannel(channel_);
     }
-    // 链接已经释放，增加信号量
+    // Tcp链接已经释放，需要将当前线程放回到线程池中
     pool_->setThreadBack(workerThread_);
     LOG_DEBUG("Tcp连接: %s 已断开", name_.c_str());
     LOG_DEBUG("============================================");
