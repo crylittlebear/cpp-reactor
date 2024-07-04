@@ -51,7 +51,7 @@ int SelectPoller::modify(Channel* channel) {
     return 0;
 }
 
-int SelectPoller::poll(EventLoop* evLoop, int timeout) {
+int SelectPoller::dispatch(EventLoop* evLoop, int timeout) {
     timeval tv;
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
@@ -60,7 +60,7 @@ int SelectPoller::poll(EventLoop* evLoop, int timeout) {
     int num = select(maxfd_ + 1, &tempReadSet, &tempWriteSet, 
         nullptr, &tv);
     if (num < 0) {
-        LOG_ERROR("SelcetPoller::poll() error");
+        LOG_ERROR("SelcetPoller::loop() error");
         return -1;
     }
     for (int i = 0; i <= maxfd_; ++i) {

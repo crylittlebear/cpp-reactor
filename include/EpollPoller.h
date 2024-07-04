@@ -21,7 +21,7 @@ public:
     // 修改channel中的fd在epoll树中监听的事件
     virtual int modify(Channel* channel) override;
     // 检测epoll树中的就绪的事件并处理
-    virtual int poll(EventLoop* evLoop, int timeout) override;
+    virtual int dispatch(EventLoop* evLoop, int timeout) override;
 
 private:
     int epfd_;

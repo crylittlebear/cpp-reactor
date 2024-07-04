@@ -62,7 +62,7 @@ int EpollPoller::modify(Channel* channel) {
     return 0;
 }
 
-int EpollPoller::poll(EventLoop* evLoop, int timeout) {
+int EpollPoller::dispatch(EventLoop* evLoop, int timeout) {
     int numActive = epoll_wait(epfd_, evs_, EpollEventSize, timeout);
     if (numActive == -1 && errno != EINTR) {
         LOG_ERROR("file=EpollPoller.cc, line=%d, errno: %d, msg: epoll_wait() error!", 

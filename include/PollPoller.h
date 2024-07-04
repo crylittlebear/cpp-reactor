@@ -1,16 +1,16 @@
 #pragma once
 
-#include <sys/select.h>
-
 #include "Poller.h"
+
+#include <poll.h>
 
 class EventLoop;
 class Channel;
 
-class SelectPoller : public Poller {
+class PollPoller : public Poller {
 public:
-    SelectPoller();
-    virtual ~SelectPoller();
+    PollPoller();
+    ~PollPoller();
 
     virtual int add(Channel* channel) override;
 
@@ -22,6 +22,5 @@ public:
 
 private:
     int maxfd_;
-    fd_set readSet_;
-    fd_set writeSet_;
+    pollfd* fds_;
 };

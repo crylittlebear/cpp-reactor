@@ -1,16 +1,18 @@
 #include "EventLoop.h"
 #include "EpollPoller.h"
 #include "SelectPoller.h"
+#include "PollPoller.h"
 #include "Channel.h"
 #include "Logger.h"
 
 #include <fcntl.h>
 
 EventLoop::EventLoop(const std::string& name) {
+    // LOG_DEBUG("EventLoop::EventLoop()构造函数");
     isQuit_ = false;
     threadId_ = std::this_thread::get_id();
     threadName_ = name == ""? "MainThread" : name;
-    poller_ = new SelectPoller;
+    poller_ = new PollPoller;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair_);
     if (ret == -1) {
         // LOG_ERROR
@@ -25,6 +27,7 @@ EventLoop::EventLoop(const std::string& name) {
     flag |= O_NONBLOCK;
     fcntl(socketPair_[1], F_SETFL, flag);
     addTask(channel, TYPE_ADD);
+    // LOG_DEBUG("EventLoop::EventLoop(), %s 构造成功", threadName_.c_str());
 }
 
 EventLoop::~EventLoop() {
@@ -36,7 +39,7 @@ EventLoop::~EventLoop() {
 int EventLoop::loop() {
     assert(isQuit_ != true);
     while (!isQuit_) {
-        poller_->poll(this, 2);
+        poller_->dispatch(this, 2);
         processTask();
     }
     return 0;
