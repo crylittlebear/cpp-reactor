@@ -77,9 +77,10 @@ void TcpServer::acceptNewConnection() {
     // new TcpConnection(cfd, evLoop);
 
     WorkerThread* worker = pool_->takeWorkerThread();
+    assert(worker != nullptr);
     if (worker->connections_.find(cfd) == worker->connections_.end()) {
         // 如果工作线程中没有保存cfd相应的TCP链接
-        (worker->connections_)[cfd] = new TcpConnection(cfd, worker->getEventLoop(), worker);
+        (worker->connections_)[cfd] = new TcpConnection(cfd, worker->getEventLoop(), worker, pool_);
         LOG_DEBUG("Add new TcpConnection: %d to thread %s", cfd, 
             worker->getEventLoop()->threadName_.c_str());
     }

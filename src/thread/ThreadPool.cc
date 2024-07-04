@@ -3,7 +3,8 @@
 #include "EventLoop.h"
 #include "Logger.h"
 
-ThreadPool::ThreadPool(EventLoop* mainLoop, int size) {
+ThreadPool::ThreadPool(EventLoop* mainLoop, int size)
+    : sem_(size) {
     threadSize_ = size;
     threadIndex_ = 0;
     isRuning_ = false;
@@ -49,9 +50,28 @@ WorkerThread* ThreadPool::takeWorkerThread() {
     assert(isRuning_);
     WorkerThread* worker = nullptr;
     if (threadSize_ > 0) {
-        worker = threads_[threadIndex_];
+        sem_.wait();
+        for (int i = 0; i < threadSize_; ++i) {
+            if (busyThreadSet_.find(i) == busyThreadSet_.end()) {
+                worker = threads_[i];
+                busyThreadSet_.insert(i);
+                break;
+            }
+        }
+    }
+    if (worker != nullptr) {
         LOG_DEBUG("从线程池中取出线程: %s", worker->getEventLoop()->threadName_.c_str());
-        threadIndex_ = ++threadIndex_ % threadSize_;
     }
     return worker;
+}
+
+void ThreadPool::setThreadBack(WorkerThread* thread) {
+    for (int i = 0; i < threadSize_; ++i) {
+        if (threads_[i] == thread) {
+            busyThreadSet_.erase(i);
+            sem_.post();
+            LOG_DEBUG("将线程: %s 归还给线程池", threads_[i]->getEventLoop()->threadName_.c_str());
+            break;
+        }
+    }
 }

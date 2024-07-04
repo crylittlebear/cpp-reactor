@@ -17,11 +17,12 @@ enum ParseState {
 };
 
 class Buffer;
+class Channel;
 class HttpResponse;
 
 class HttpRequest {
 public:
-    HttpRequest();
+    HttpRequest(Channel* channel);
     ~HttpRequest();
 
     void addHeader(const std::string& key, const std::string& value);
@@ -49,6 +50,7 @@ private:
 
 private:
     ParseState parseState_;
+    Channel* channel_;
     std::string method_;
     std::string url_;
     std::string version_;

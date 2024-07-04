@@ -5,18 +5,19 @@
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "WorkerThread.h"
+#include "ThreadPool.h"
 #include "Logger.h"
 
 #include <functional>
 
 const int InitBufSize = 10240;
 
-TcpConnection::TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread) {
+TcpConnection::TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread, ThreadPool* pool) {
     loop_ = evLoop;
+    pool_ = pool;
     workerThread_ = thread;
     readBuf_ = new Buffer(InitBufSize);
     writeBuf_ = new Buffer(InitBufSize);
-    request_ = new HttpRequest;
     response_ = new HttpResponse;
     name_ = "Connection-" + std::to_string(fd);
     auto readCallback = std::bind(&TcpConnection::processRead, this);
@@ -24,6 +25,7 @@ TcpConnection::TcpConnection(int fd, EventLoop* evLoop, WorkerThread* thread) {
     auto destroyCallback = std::bind(&TcpConnection::processDestroy, this);
     channel_ = new Channel(fd, ReadEvent, readCallback, writeCallback
         , destroyCallback);
+    request_ = new HttpRequest(channel_);
     loop_->addTask(channel_, TYPE_ADD);
 }
 
@@ -36,6 +38,8 @@ TcpConnection::~TcpConnection() {
         delete response_;
         loop_->freeChannel(channel_);
     }
+    // 链接已经释放，增加信号量
+    pool_->setThreadBack(workerThread_);
     LOG_DEBUG("Tcp连接: %s 已断开", name_.c_str());
     LOG_DEBUG("============================================");
 }

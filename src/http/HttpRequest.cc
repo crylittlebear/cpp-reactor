@@ -1,9 +1,11 @@
 #include "HttpRequest.h"
 #include "HttpResponse.h"
 #include "Buffer.h"
+#include "Channel.h"
 #include "Logger.h"
 
-HttpRequest::HttpRequest() {
+HttpRequest::HttpRequest(Channel* channel) {
+    channel_ = channel;
     parseState_ = PARSE_REQ_LINE;
 }
 
@@ -130,6 +132,11 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
         response->fillResponseMembers(file, OK, getFileType(".html"), sendFunc);
     } else {
         // 是文件
+        /**
+         * 由于如果有大文件需要发送，需要占用线程池中通信线程接收新连接，因此需要重新开线程
+         * 实现文件的传输
+        */
+
         auto sendFunc = std::bind(&HttpRequest::sendFile, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
         response->fillResponseMembers(file, OK, getFileType(file), sendFunc);
@@ -196,13 +203,20 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
     assert(fd > 0);
 #if 1
     while (1) {
-        char* buf = new char[4096];
-        int len = read(fd, buf, 4096);
+        char* buf = new char[40960];
+        int len = read(fd, buf, 40960);
         if (len > 0) {
             // send(cfd, buf, len, 0);
+            // LOG_DEBUG("HttpRequest::sendFile(), send %d data", len);
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
             sendBuf->writeToFd(socket);
+            // // 因为在传输大文件时，如果手动关闭传输，需要关闭TCP连接
+            // if (sendLen == 0) {
+            //     if (channel_->destroyCallback_) {
+            //         channel_->destroyCallback_();
+            //     }
+            // }
             delete buf;
 #endif
         } else if (len == 0) {
