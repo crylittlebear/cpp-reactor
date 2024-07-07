@@ -60,5 +60,8 @@
         "typeinfo": "cpp",
         "unordered_set": "cpp"
     },
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "aide.convertLanguagePairs": {
+        "cpp": "go"
+    }
 }

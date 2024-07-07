@@ -48,7 +48,8 @@ TcpConnection::~TcpConnection() {
 }
 
 void TcpConnection::processRead() {
-    LOG_DEBUG("TcpConnection::processRead(), threadName: %s", loop_->threadName_.c_str());
+    LOG_DEBUG("TcpConnection::processRead(), threadName: %s", 
+        loop_->threadName_.c_str());
     int sock = channel_->fd();
     int len = readBuf_->readFromFd(sock);
     // LOG_DEBUG("接收到的HTTP请求消息为: %s", readBuf_->readPtr());
@@ -77,7 +78,7 @@ void TcpConnection::processRead() {
 }
 
 void TcpConnection::processWrite() {
-    LOG_DEBUG("开始发送数据了...");
+    // LOG_DEBUG("开始发送数据了...");
     int len = writeBuf_->writeToFd(channel_->fd());
     if (len > 0) {
         // 判断数据是否全部发送
@@ -90,7 +91,8 @@ void TcpConnection::processWrite() {
 }
 
 void TcpConnection::processDestroy() {
-    LOG_DEBUG("TcpConnection::processDestroy(), threadName: %s", loop_->threadName_.c_str());
+    LOG_DEBUG("TcpConnection::processDestroy(), threadName: %s", 
+        loop_->threadName_.c_str());
     int fd = channel_->fd();
     (workerThread_->connections_)[fd]->~TcpConnection();
     (workerThread_->connections_).erase(fd);

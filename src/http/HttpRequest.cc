@@ -4,6 +4,14 @@
 #include "Channel.h"
 #include "Logger.h"
 
+#include <chrono>
+
+using namespace std::chrono;
+
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
+
 HttpRequest::HttpRequest(Channel* channel) {
     channel_ = channel;
     parseState_ = PARSE_REQ_LINE;
@@ -118,8 +126,7 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     int ret = stat(file.c_str(), &st);
     if (ret == -1) {
         // 文件不存在
-        auto sendFunc = std::bind(&HttpRequest::sendFile, this,
-            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        auto sendFunc = std::bind(&HttpRequest::sendFile, this, _1, _2, _3);
         response->fillResponseMembers("404.html", NotFound, getFileType("404.html"), 
             sendFunc);
         return true;
@@ -127,8 +134,7 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     // 文件存在
     if (S_ISDIR(st.st_mode)) {
         // 是文件夹
-        auto sendFunc = std::bind(&HttpRequest::sendDir, this,
-            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        auto sendFunc = std::bind(&HttpRequest::sendDir, this, _1, _2, _3);
         response->fillResponseMembers(file, OK, getFileType(".html"), sendFunc);
     } else {
         // 是文件
@@ -137,8 +143,7 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
          * 实现文件的传输
         */
 
-        auto sendFunc = std::bind(&HttpRequest::sendFile, this,
-            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        auto sendFunc = std::bind(&HttpRequest::sendFile, this, _1, _2, _3);
         response->fillResponseMembers(file, OK, getFileType(file), sendFunc);
         response->addResponseHeader("Content-length", std::to_string(st.st_size));
     }
@@ -203,21 +208,12 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
     assert(fd > 0);
 #if 1
     while (1) {
-        char* buf = new char[40960];
-        int len = read(fd, buf, 40960);
+        char buf[4096];
+        int len = read(fd, buf, 4096);
         if (len > 0) {
-            // send(cfd, buf, len, 0);
-            // LOG_DEBUG("HttpRequest::sendFile(), send %d data", len);
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
             sendBuf->writeToFd(socket);
-            // // 因为在传输大文件时，如果手动关闭传输，需要关闭TCP连接
-            // if (sendLen == 0) {
-            //     if (channel_->destroyCallback_) {
-            //         channel_->destroyCallback_();
-            //     }
-            // }
-            delete buf;
 #endif
         } else if (len == 0) {
             break;
@@ -241,27 +237,127 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
 #endif
     close(fd);
 }
+
+std::string toFormatTime(time_point<system_clock> tp) {
+    // 将时间点转换为时间戳
+    std::time_t tt = system_clock::to_time_t(tp);
+    std::tm t;
+    localtime_r(&tt, &t);  // 使用 localtime_r 线程安全地将 time_t 转换为 tm 结构
+
+    // 打印调试信息
+    std::cout << "Debug: std::time_t = " << tt << std::endl;
+    std::cout << "Debug: tm_year = " << t.tm_year + 1900 
+              << ", tm_mon = " << t.tm_mon + 1 
+              << ", tm_mday = " << t.tm_mday 
+              << ", tm_hour = " << t.tm_hour 
+              << ", tm_min = " << t.tm_min 
+              << ", tm_sec = " << t.tm_sec << std::endl;
+
+    // 格式化时间为字符串
+    char format_time[64];
+    std::strftime(format_time, sizeof(format_time), "%Y-%m-%d %H:%M:%S", &t);
+
+    return std::string(format_time);
+}
+
+// void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
+//     LOG_DEBUG("HttpRequest::sendDir()");
+// 	char buf[4096] = {0};
+// 	sprintf(buf, "<html><head><title>%s</title></head><body><table>", dirName.c_str());
+//     for (const auto& entry : std::filesystem::directory_iterator(dirName)) {
+//         auto name = entry.path().filename();
+//         auto time = entry.last_write_time();
+//         auto t = time.time_since_epoch();
+//         std::string lastModTime = toFormatTime(t);
+//         if (entry.is_directory()) {
+//             sprintf(buf + strlen(buf), 
+// 				 "<tr><td><a href=\"%s/\">%s</a></td><td>%d</td><td>%s</td></tr>", 
+// 				 name.c_str(), name.c_str(), 0, lastModTime.c_str());
+//         } else {
+// 			sprintf(buf + strlen(buf), 
+// 				 "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td><td>%s</td></tr>", 
+// 				 name.c_str(), name.c_str(), entry.file_size(), lastModTime.c_str());            
+//         }
+//         sendBuf->append(buf);
+//         sendBuf->writeToFd(socket);
+//         memset(buf, 0, sizeof(buf));
+//     }
+//     sprintf(buf, "</table></body></html>");
+//     sendBuf->append(buf);
+//     sendBuf->writeToFd(socket);
+// }
+
 void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
     LOG_DEBUG("HttpRequest::sendDir()");
-	char buf[4096] = {0};
-	sprintf(buf, "<html><head><title>%s</title></head><body><table>", dirName.c_str());
+
+    std::ostringstream html;
+    html << "<html><head><title>" << dirName << "</title>"
+         << "<style>"
+         << "body { font-family: Arial, sans-serif; }"
+         << "table { width: 100%; border-collapse: collapse; }"
+         << "th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }"
+         << "th { cursor: pointer; }"
+         << "tr:hover { background-color: #f5f5f5; }"
+         << ".icon { width: 20px; }"
+         << "</style>"
+         << "<script>"
+         << "function sortTable(n) {"
+         << "var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;"
+         << "table = document.getElementById('directoryTable');"
+         << "switching = true; dir = 'asc';"
+         << "while (switching) {"
+         << "switching = false; rows = table.rows;"
+         << "for (i = 1; i < (rows.length - 1); i++) {"
+         << "shouldSwitch = false; x = rows[i].getElementsByTagName('TD')[n];"
+         << "y = rows[i + 1].getElementsByTagName('TD')[n];"
+         << "if (dir == 'asc') {"
+         << "if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {"
+         << "shouldSwitch = true; break; } }"
+         << "else if (dir == 'desc') {"
+         << "if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {"
+         << "shouldSwitch = true; break; } } }"
+         << "if (shouldSwitch) {"
+         << "rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);"
+         << "switching = true; switchcount++; }"
+         << "else {"
+         << "if (switchcount == 0 && dir == 'asc') {"
+         << "dir = 'desc'; switching = true; } } } }"
+         << "</script></head><body>"
+         << "<h2>Index of " << dirName << "</h2>"
+         << "<table id='directoryTable'><thead><tr>"
+         << "<th onclick='sortTable(0)'>Name</th>"
+         << "<th onclick='sortTable(1)'>Size</th>"
+         << "<th onclick='sortTable(2)'>Last Modified</th>"
+         << "</tr></thead><tbody>";
+
     for (const auto& entry : std::filesystem::directory_iterator(dirName)) {
-        auto name = entry.path().filename();
+        auto name = entry.path().filename().string();
+        auto file_time = entry.last_write_time();
+        
+        // 转换 file_time 到 system_clock::time_point
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            file_time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+
+        std::string lastModTime = toFormatTime(sctp);
+
+        std::string icon = entry.is_directory() ? "📁" : "📄"; // 使用 emoji 图标
+
+        html << "<tr><td><a href=\"" << name << (entry.is_directory() ? "/" : "") << "\">"
+             << icon << " " << name << (entry.is_directory() ? "/" : "") << "</a></td><td>";
+
         if (entry.is_directory()) {
-            sprintf(buf + strlen(buf), 
-				 "<tr><td><a href=\"%s/\">%s</a></td><td>%d</td></tr>", 
-				 name.c_str(), name.c_str(), 0);
+            html << "Directory";
         } else {
-			sprintf(buf + strlen(buf), 
-				 "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td></tr>", 
-				 name.c_str(), name.c_str(), entry.file_size());            
+            html << entry.file_size();
         }
-        sendBuf->append(buf);
-        sendBuf->writeToFd(socket);
-        memset(buf, 0, sizeof(buf));
+
+        html << "</td><td>" << lastModTime << "</td></tr>";
     }
-    sprintf(buf, "</table></body></html>");
-    sendBuf->append(buf);
+
+    html << "</tbody></table></body></html>";
+
+    std::string htmlStr = html.str();
+    sendBuf->append(htmlStr.c_str(), htmlStr.size());
     sendBuf->writeToFd(socket);
 }
 
