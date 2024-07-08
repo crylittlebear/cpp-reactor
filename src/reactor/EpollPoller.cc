@@ -72,11 +72,15 @@ int EpollPoller::dispatch(EventLoop* evLoop, int timeout) {
             int fd = evs_[i].data.fd;
             int events = evs_[i].events;
             // EventLoop中保存有文件描述符到Channel的映射表，因此由EventLoop处理
-            if (events & EPOLLIN) { 
-                evLoop->handleEvent(fd, ReadEvent);
-            }
-            if (events & EPOLLOUT) {
-                evLoop->handleEvent(fd, WriteEvent);
+            if ((events & EPOLLHUP) || (events & EPOLLERR)) {
+                evLoop->handleEvent(fd, ErrorEvent);
+            } else {
+                if (events & EPOLLIN) { 
+                    evLoop->handleEvent(fd, ReadEvent);
+                }
+                if (events & EPOLLOUT) {
+                    evLoop->handleEvent(fd, WriteEvent);
+                }
             }
         }
     }

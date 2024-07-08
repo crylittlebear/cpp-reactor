@@ -8,7 +8,7 @@ int main() {
     unsigned short port = 9999;
     chdir("/home/heng/Res");
 
-    TcpServer server(10, port);
+    TcpServer server(12, port);
     server.start();
     return 0;
 }

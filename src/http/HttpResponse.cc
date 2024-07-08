@@ -19,9 +19,8 @@ void HttpResponse::addResponseHeader(const std::string& key,
     responseHeaders_[key] = value;
 }
 
-void HttpResponse::prepareMsg(Buffer* buf, int socket) {
-    LOG_INFO("func = %s", __FUNCTION__);
-    LOG_DEBUG("HttpResponse::prepareMsg()");
+void HttpResponse::prepareMsg(Buffer* buf, Channel* channel) {
+    LOG_DEBUG("HttpResponse::prepareMsg(), 准备Http响应消息");
     // 添加响应行
     std::string responseLine = "HTTP/1.1 ";
     responseLine += std::to_string(statusCode_);
@@ -39,9 +38,10 @@ void HttpResponse::prepareMsg(Buffer* buf, int socket) {
     // 添加空行
     buf->append("\r\n");
     //发送数据
-    buf->writeToFd(socket);
+    buf->writeToFd(channel);
+    LOG_DEBUG("HttpResponse::prepareMsg(), 成功发送响应行、响应头、空行");
     // 发送数据
-    sendDataFunc_(fileName_, buf, socket);
+    sendDataFunc_(fileName_, buf, channel);
 }
 
 void HttpResponse::fillResponseMembers(const std::string& fileName,

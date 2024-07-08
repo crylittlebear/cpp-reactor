@@ -1,5 +1,6 @@
 #include "Buffer.h"
 #include "Logger.h"
+#include "Channel.h"
 
 #include <sys/socket.h>
 
@@ -81,7 +82,6 @@ ssize_t Buffer::readFromFd(int fd) {
     // 接收数据
     int len = readv(fd, vec, 2);
     if (len < 0) {
-        // LOG_ERROR
         LOG_ERROR("file=Buffer.cc, line=%d, msg: readv() error!", __LINE__);
     } else if (len <= writable) {
         writePos_ += len;
@@ -92,14 +92,19 @@ ssize_t Buffer::readFromFd(int fd) {
     return len;
 }
 
-ssize_t Buffer::writeToFd(int fd) {
+ssize_t Buffer::writeToFd(Channel* channel) {
     int totalLen = 0;
+    int fd = channel->fd();
     while (readableSise() > 0) {
         auto len = send(fd, readPtr(), readableSise(), MSG_NOSIGNAL);
         if (len > 0) {
-             readPos_ += len;
-             totalLen += len;
-        }
+            // LOG_DEBUG("Buffer::writeToFd(), 成功发送 %d 字节的数据", (int)len);
+            readPos_ += len;
+            totalLen += len;
+        } 
+        // else {
+        //     break;
+        // }
     }
     return totalLen;
 }
@@ -114,6 +119,8 @@ std::string Buffer::retriveHttpLine() {
 }
 
 void Buffer::print() {
+    LOG_DEBUG("Buffer::print(), 打印HTTP请求信息:");
     std::string_view sv(readPtr(), readableSise());
     std::cout << sv << std::endl;
+    LOG_DEBUG("Buffer::print(), 打印HTTP请求信息结束..............");
 }

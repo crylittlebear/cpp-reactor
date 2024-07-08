@@ -5,6 +5,7 @@
 #include "Logger.h"
 
 #include <chrono>
+#include <sys/socket.h>
 
 using namespace std::chrono;
 
@@ -44,8 +45,7 @@ const std::string HttpRequest::getHeader(const std::string& key) {
 }
 
 bool HttpRequest::parseRequestLine(Buffer* buf) {
-    LOG_INFO("func = %s", __FUNCTION__);
-    LOG_DEBUG("HttpRequest::parseRequestLine()");
+    LOG_DEBUG("HttpRequest::parseRequestLine(), 开始解析Http请求行部分");
     assert(parseState_ == PARSE_REQ_LINE);
     // 从buf中获取与一个HTTP行
     std::string reqLine = buf->retriveHttpLine();
@@ -65,8 +65,7 @@ bool HttpRequest::parseRequestLine(Buffer* buf) {
 }
 
 bool HttpRequest::parseRequestHeader(Buffer* buf) {
-    LOG_INFO("func = %s", __FUNCTION__);
-    LOG_DEBUG("HttpRequest::parseRequestHeader()");
+    LOG_DEBUG("HttpRequest::parseRequestHeader(), 开始解析HTTP请求头部分");
     std::string header;
     while ((header = buf->retriveHttpLine()) != "") {
         auto pos = header.find(": ", 0);
@@ -84,8 +83,7 @@ bool HttpRequest::parseHttpRequest(Buffer* readBuf,
                                    HttpResponse* response,
                                    Buffer* writeBuf,
                                    int socket) {
-    LOG_INFO("func = %s", __FUNCTION__);
-    LOG_DEBUG("HttpRequest::parseHttpRequest()");
+    LOG_DEBUG("HttpRequest::parseHttpRequest(), 开始解析HTTP请求");
     assert(parseState_ == PARSE_REQ_LINE);
     bool flag = false;
     while (parseState_ != PARSE_REQ_DONE) {
@@ -105,14 +103,14 @@ bool HttpRequest::parseHttpRequest(Buffer* readBuf,
         return flag;
     }
     assert(parseState_ == PARSE_REQ_DONE);
+    LOG_DEBUG("HttpRequest::parseHttpRequest(), 解析HTTP请求完成");
     processHttpRequest(response);
-    response->prepareMsg(writeBuf, socket);
+    response->prepareMsg(writeBuf, channel_);
     return true;
 }
 
 bool HttpRequest::processHttpRequest(HttpResponse* response) {
-    LOG_INFO("func = %s", __FUNCTION__);
-    LOG_DEBUG("HttpRequest::processHttpRequest()");
+    LOG_DEBUG("HttpRequest::processHttpRequest(), 开始处理Http请求");
     assert(method_ == "get" || method_ == "GET");
     // 解码URL,防止中文乱码
     decodeMsg(url_);
@@ -125,6 +123,7 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     struct stat st;
     int ret = stat(file.c_str(), &st);
     if (ret == -1) {
+        LOG_DEBUG("HttpRequest::processHttpRequest(), 文件 %s 不存在", file.c_str());
         // 文件不存在
         auto sendFunc = std::bind(&HttpRequest::sendFile, this, _1, _2, _3);
         response->fillResponseMembers("404.html", NotFound, getFileType("404.html"), 
@@ -133,20 +132,19 @@ bool HttpRequest::processHttpRequest(HttpResponse* response) {
     }
     // 文件存在
     if (S_ISDIR(st.st_mode)) {
-        // 是文件夹
+        LOG_DEBUG("HttpRequest::processHttpRequest(), 请求的内容是目录");
+        // 传输的是文件夹
         auto sendFunc = std::bind(&HttpRequest::sendDir, this, _1, _2, _3);
         response->fillResponseMembers(file, OK, getFileType(".html"), sendFunc);
     } else {
-        // 是文件
-        /**
-         * 由于如果有大文件需要发送，需要占用线程池中通信线程接收新连接，因此需要重新开线程
-         * 实现文件的传输
-        */
-
+        LOG_DEBUG("HttpRequest::processHttpRequest(), 请求的内容是文件, 文件名是: %s",
+            file.c_str());
+        // 传输的是文件
         auto sendFunc = std::bind(&HttpRequest::sendFile, this, _1, _2, _3);
         response->fillResponseMembers(file, OK, getFileType(file), sendFunc);
         response->addResponseHeader("Content-length", std::to_string(st.st_size));
     }
+    LOG_DEBUG("HttpRequest::processHttpRequest(), Http请求处理完毕");
     return true;
 }
 
@@ -201,19 +199,28 @@ const std::string HttpRequest::getFileType(const std::string name) {
     return "text/plain; charset=utf-8";
 }
 
-void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
-    LOG_DEBUG("HttpRequest::sendFile()");
+void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* channel) {
+    LOG_DEBUG("HttpRequest::sendFile(), 开始发送文件");
     // 1. 打开文件
     int fd = open(fileName.data(), O_RDONLY);
     assert(fd > 0);
 #if 1
     while (1) {
-        char buf[4096];
-        int len = read(fd, buf, 4096);
+        //判断对端是否关闭
+        // char recvBuf[64];
+        // int recvLen = recv(channel->fd(), recvBuf, sizeof recvBuf, 0);
+        // if (recvLen == 0) {
+        //     break;
+        // }
+        char buf[40960];
+        int len = read(fd, buf, 40960);
         if (len > 0) {
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
-            sendBuf->writeToFd(socket);
+            int sendLen = sendBuf->writeToFd(channel);
+            if (sendLen != len) {
+                break;
+            }
 #endif
         } else if (len == 0) {
             break;
@@ -236,22 +243,24 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, int socket) {
     }
 #endif
     close(fd);
+    LOG_DEBUG("HttpRequest::sendFile(), 文件发送完毕");
 }
 
 std::string toFormatTime(time_point<system_clock> tp) {
     // 将时间点转换为时间戳
     std::time_t tt = system_clock::to_time_t(tp);
     std::tm t;
-    localtime_r(&tt, &t);  // 使用 localtime_r 线程安全地将 time_t 转换为 tm 结构
+     // 使用 localtime_r 线程安全地将 time_t 转换为 tm 结构
+    localtime_r(&tt, &t); 
 
     // 打印调试信息
-    std::cout << "Debug: std::time_t = " << tt << std::endl;
-    std::cout << "Debug: tm_year = " << t.tm_year + 1900 
-              << ", tm_mon = " << t.tm_mon + 1 
-              << ", tm_mday = " << t.tm_mday 
-              << ", tm_hour = " << t.tm_hour 
-              << ", tm_min = " << t.tm_min 
-              << ", tm_sec = " << t.tm_sec << std::endl;
+    // std::cout << "Debug: std::time_t = " << tt << std::endl;
+    // std::cout << "Debug: tm_year = " << t.tm_year + 1900 
+    //           << ", tm_mon = " << t.tm_mon + 1 
+    //           << ", tm_mday = " << t.tm_mday 
+    //           << ", tm_hour = " << t.tm_hour 
+    //           << ", tm_min = " << t.tm_min 
+    //           << ", tm_sec = " << t.tm_sec << std::endl;
 
     // 格式化时间为字符串
     char format_time[64];
@@ -287,9 +296,8 @@ std::string toFormatTime(time_point<system_clock> tp) {
 //     sendBuf->writeToFd(socket);
 // }
 
-void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
-    LOG_DEBUG("HttpRequest::sendDir()");
-
+void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, Channel* channel) {
+    LOG_DEBUG("HttpRequest::sendDir(), 开始发送目录信息");
     std::ostringstream html;
     html << "<html><head><title>" << dirName << "</title>"
          << "<style>"
@@ -335,8 +343,8 @@ void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
         auto file_time = entry.last_write_time();
         
         // 转换 file_time 到 system_clock::time_point
-        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-            file_time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+        auto sctp = time_point_cast<system_clock::duration>(
+            file_time - std::filesystem::file_time_type::clock::now() + system_clock::now());
 
         std::string lastModTime = toFormatTime(sctp);
 
@@ -358,7 +366,8 @@ void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
 
     std::string htmlStr = html.str();
     sendBuf->append(htmlStr.c_str(), htmlStr.size());
-    sendBuf->writeToFd(socket);
+    sendBuf->writeToFd(channel);
+    LOG_DEBUG("HttpRequest::sendDir(), 目录信息发送完毕");
 }
 
 void HttpRequest::setMethod(const std::string& method) { method_ = method; }

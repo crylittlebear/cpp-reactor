@@ -11,6 +11,8 @@
 
 const size_t initBufSize = 1024;
 
+class Channel;
+
 class Buffer {
 public:
     Buffer(size_t initSize = initBufSize);
@@ -28,7 +30,7 @@ public:
     // 从文件描述符中读数据
     ssize_t readFromFd(int fd);
     // 向文件描述符中写数据
-    ssize_t writeToFd(int fd);
+    ssize_t writeToFd(Channel* channel);
     // 从buffer中获取一个HTTP行
     std::string retriveHttpLine();
     // 打印Buffer中的待读内容

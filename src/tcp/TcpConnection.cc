@@ -33,25 +33,43 @@ TcpConnection::TcpConnection(int fd,
 }
 
 TcpConnection::~TcpConnection() {
-    if (readBuf_ && readBuf_->readableSise() == 0 && writeBuf_  
-                 && writeBuf_->readableSise() == 0) {
-        delete readBuf_;
-        delete writeBuf_;
-        delete request_;
-        delete response_;
-        loop_->freeChannel(channel_);
-    }
+    // if (readBuf_ && readBuf_->readableSise() == 0 && writeBuf_  
+    //              && writeBuf_->readableSise() == 0) {
+    //     delete readBuf_;
+    //     delete writeBuf_;
+    //     delete request_;
+    //     delete response_;
+    //     (workerThread_->connections_).erase(channel_->fd());
+    //     auto& mp = loop_->channelMap();
+    //     mp.erase(channel_->fd());
+    //     // 关闭channel中的文件描述符
+    //     close(channel_->fd());
+    //     delete channel_;
+    //     // Tcp链接已经释放，需要将当前线程放回到线程池中
+    //     pool_->setThreadBack(workerThread_);
+    //     LOG_DEBUG("Tcp连接: %s 已断开", name_.c_str());
+    // }
+    delete readBuf_;
+    delete writeBuf_;
+    delete request_;
+    delete response_;
+    (workerThread_->connections_).erase(channel_->fd());
+    auto& mp = loop_->channelMap();
+    mp.erase(channel_->fd());
+    // 关闭channel中的文件描述符
+    close(channel_->fd());
+    delete channel_;
     // Tcp链接已经释放，需要将当前线程放回到线程池中
     pool_->setThreadBack(workerThread_);
     LOG_DEBUG("Tcp连接: %s 已断开", name_.c_str());
-    LOG_DEBUG("============================================");
 }
 
 void TcpConnection::processRead() {
-    LOG_DEBUG("TcpConnection::processRead(), threadName: %s", 
-        loop_->threadName_.c_str());
+    LOG_DEBUG("TcpConnection::processRead(), 读回调, 线程名: %s, 套接字: %d", 
+        loop_->threadName_.c_str(), channel_->fd());
     int sock = channel_->fd();
     int len = readBuf_->readFromFd(sock);
+    readBuf_->print();
     // LOG_DEBUG("接收到的HTTP请求消息为: %s", readBuf_->readPtr());
     if (len > 0) {
     #ifdef MSG_SEND_AUTO
@@ -79,7 +97,7 @@ void TcpConnection::processRead() {
 
 void TcpConnection::processWrite() {
     // LOG_DEBUG("开始发送数据了...");
-    int len = writeBuf_->writeToFd(channel_->fd());
+    int len = writeBuf_->writeToFd(channel_);
     if (len > 0) {
         // 判断数据是否全部发送
         if (writeBuf_->readableSise() == 0) {
@@ -91,9 +109,8 @@ void TcpConnection::processWrite() {
 }
 
 void TcpConnection::processDestroy() {
-    LOG_DEBUG("TcpConnection::processDestroy(), threadName: %s", 
+    LOG_DEBUG("TcpConnection::processDestroy(), 线程名: %s", 
         loop_->threadName_.c_str());
     int fd = channel_->fd();
     (workerThread_->connections_)[fd]->~TcpConnection();
-    (workerThread_->connections_).erase(fd);
 }

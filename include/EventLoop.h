@@ -18,6 +18,7 @@ class Poller;
 struct ChannelElem {
     ChannelElem(Channel* channel, int type) 
         : channel_(channel), type_(type) {}
+
     Channel* channel_;
     int type_;
 };
@@ -27,7 +28,7 @@ public:
     EventLoop(const std::string& name = "");
     ~EventLoop();
 
-    // 唤醒子线程处理相应任务
+    // 唤醒线程处理相应任务
     void taskWakeup();
     // 读取本地数据
     void readLocalMsg();
@@ -39,16 +40,13 @@ public:
     int addTask(Channel* channel, int type);
     // 处理任务队列中的任务
     int processTask();
-    // 销毁Channel
-    int freeChannel(Channel* channel);
-    
+    // 处理Channel上的读写事件
     int add(Channel* channel);
     int remove(Channel* channel);
     int modify(Channel* channel);
+    // getters
+    std::unordered_map<int, Channel*>& channelMap();
 
-    //
-    const std::unordered_map<int, Channel*>&
-    channelMap() const;
 public:
     // poller
     Poller* poller_;

@@ -8,11 +8,10 @@
 #include <fcntl.h>
 
 EventLoop::EventLoop(const std::string& name) {
-    // LOG_DEBUG("EventLoop::EventLoop()构造函数");
     isQuit_ = false;
     threadId_ = std::this_thread::get_id();
     threadName_ = name == ""? "MainThread" : name;
-    poller_ = new PollPoller;
+    poller_ = new EpollPoller;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair_);
     if (ret == -1) {
         // LOG_ERROR
@@ -27,7 +26,6 @@ EventLoop::EventLoop(const std::string& name) {
     flag |= O_NONBLOCK;
     fcntl(socketPair_[1], F_SETFL, flag);
     addTask(channel, TYPE_ADD);
-    // LOG_DEBUG("EventLoop::EventLoop(), %s 构造成功", threadName_.c_str());
 }
 
 EventLoop::~EventLoop() {
@@ -50,36 +48,35 @@ int EventLoop::handleEvent(int fd, int event) {
     Channel* channel = channelMap_[fd];
     assert(channel->fd() == fd);
     if ((event & ReadEvent) && channel->readCallback_ != nullptr) {
+        // LOG_DEBUG("EventLoop::handleEvent(), readCallback");
         channel->readCallback_();
     }
     if ((event & WriteEvent) && channel->writeCallback_ != nullptr) {
+        // LOG_DEBUG("EventLoop::handleEvent(), writeCallback");
         channel->writeCallback_();
     }
+    if ((event & ErrorEvent) && channel->destroyCallback_ != nullptr) {
+        LOG_DEBUG("EventLoop::handleEvent(), destroyCallback");
+        channel->destroyCallback_();
+    } 
     return 0;
 }
 
 int EventLoop::addTask(Channel* channel, int type) {
-    {
-        std::unique_lock<std::mutex> locker(mutex_);
-        ChannelElem* elem = new ChannelElem(channel, type);
-        taskQue_.push(elem);
-        taskWakeup();
-    }
-    // // 添加任务后需要唤醒响应的线程处理任务
-    // if (threadId_ == std::this_thread::get_id()) {
-    //     // 添加任务的线程是子线程
-    //     processTask();
-    // } else {
-    //     // 处理任务
+    // {
+    //     std::unique_lock<std::mutex> locker(mutex_);
+    //     ChannelElem* elem = new ChannelElem(channel, type);
+    //     taskQue_.push(elem);
     //     taskWakeup();
     // }
-    // taskWakeup();
-    // processTask();
+    ChannelElem* elem = new ChannelElem(channel, type);
+    taskQue_.push(elem);
+    taskWakeup();
     return 0;
 }
 
 int EventLoop::processTask() {
-    std::unique_lock<std::mutex> locker(mutex_);
+    // std::unique_lock<std::mutex> locker(mutex_);
     while (!taskQue_.empty()) {
         auto elem = taskQue_.front();
         if (elem->type_ == TYPE_ADD) {
@@ -103,7 +100,10 @@ int EventLoop::add(Channel* channel) {
 
 int EventLoop::remove(Channel* channel) {
     poller_->remove(channel);
+
+    // 调用channel的destroy回调
     if (channel->destroyCallback_) {
+        LOG_DEBUG("channel::destroyCallback()");
         channel->destroyCallback_();
     }
     return 0;
@@ -114,19 +114,8 @@ int EventLoop::modify(Channel* channel) {
     return 0;
 }
 
-int EventLoop::freeChannel(Channel* channel) {
-    LOG_DEBUG("free channel");
-    // 从映射表中将channel删除
-    channelMap_.erase(channel->fd());
-    // 关闭channel中保存的文件描述符
-    close(channel->fd());
-    // 释放channel内存
-    delete channel;
-    return 0;
-}
-
-const std::unordered_map<int, Channel*>&
-EventLoop::channelMap() const {
+std::unordered_map<int, Channel*>&
+EventLoop::channelMap() {
     return channelMap_;
 }
 

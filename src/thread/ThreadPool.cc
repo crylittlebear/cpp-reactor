@@ -3,8 +3,10 @@
 #include "EventLoop.h"
 #include "Logger.h"
 
-ThreadPool::ThreadPool(EventLoop* mainLoop, int size)
-    : sem_(size) {
+#include <iostream>
+#include <chrono>
+
+ThreadPool::ThreadPool(EventLoop* mainLoop, int size) {
     threadSize_ = size;
     threadIndex_ = 0;
     isRuning_ = false;
@@ -19,7 +21,7 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::start() {
-    LOG_DEBUG("ThreadPool::start(), 开启线程池");
+    LOG_DEBUG("ThreadPoll::start(), 准备开启线程池");
     assert(!isRuning_);
     if (mainLoop_->threadId_ != std::this_thread::get_id()) {
         LOG_FATAL("func = %s, 线程池的运行线程与主线程不符", __FUNCTION__);
@@ -29,7 +31,9 @@ void ThreadPool::start() {
         WorkerThread* worker = new WorkerThread(i);
         worker->run();
         threads_.push_back(worker);
+        LOG_DEBUG("ThreadPoll::start(), 成功创建工作线程%s", worker->getThreadName().c_str());
     }
+    LOG_DEBUG("ThreadPoll::start(), 线程池已开启...");
 }
 
 EventLoop* ThreadPool::takeWorkerEventLoop() {
@@ -47,10 +51,10 @@ EventLoop* ThreadPool::takeWorkerEventLoop() {
 }
 
 WorkerThread* ThreadPool::takeWorkerThread() {
+    LOG_DEBUG("ThreadPoll::takeWorkerThread(), 准备从线程池中获取线程");
     assert(isRuning_);
     WorkerThread* worker = nullptr;
     if (threadSize_ > 0) {
-        sem_.wait();
         for (int i = 0; i < threadSize_; ++i) {
             if (busyThreadSet_.find(i) == busyThreadSet_.end()) {
                 worker = threads_[i];
@@ -60,18 +64,31 @@ WorkerThread* ThreadPool::takeWorkerThread() {
         }
     }
     if (worker != nullptr) {
-        LOG_DEBUG("从线程池中取出线程: %s", worker->getEventLoop()->threadName_.c_str());
+        LOG_DEBUG("ThreadPoll::takeWorkerThread(), 成功获取工作线程: %s", worker->getThreadName().c_str());
+    } else {
+        LOG_DEBUG("ThreadPoll::takeWorkerThread(), 从线程池中获取线程失败");
     }
     return worker;
 }
 
 void ThreadPool::setThreadBack(WorkerThread* thread) {
+    LOG_DEBUG("------------------------------------------------------------");
+    LOG_DEBUG("ThreadPool::setThreadBack(), 准备归还线程");
     for (int i = 0; i < threadSize_; ++i) {
         if (threads_[i] == thread) {
             busyThreadSet_.erase(i);
-            sem_.post();
-            LOG_DEBUG("将线程: %s 归还给线程池", threads_[i]->getEventLoop()->threadName_.c_str());
+            LOG_DEBUG("ThreadPool::setThreadBack(), 成功将线程 %s 归还给线程池", thread->getThreadName().c_str());
+            LOG_DEBUG("------------------------------------------------------------");
             break;
+        }
+    }
+    if (busyThreadSet_.empty()) {
+        std::cout << "CurBusyThread: empty!!!!" << std::endl;
+    } else {
+        for (auto c : busyThreadSet_) {
+            std::cout << "CurBusyThread: ";
+            std::cout << c << " ";
+            std::cout << std::endl;
         }
     }
 }
