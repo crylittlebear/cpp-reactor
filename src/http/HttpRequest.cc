@@ -204,17 +204,12 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* chann
     // 1. 打开文件
     int fd = open(fileName.data(), O_RDONLY);
     assert(fd > 0);
+
+    // 设置fd为非阻塞模式
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #if 1
     while (1) {
-        char recvBuf[1];
-        int recvLen = recv(channel->fd(), recvBuf, sizeof recvBuf, MSG_PEEK | MSG_DONTWAIT);
-        if (recvLen == 0) {
-            LOG_DEBUG("HttpRequest::sendFile(), 对端关闭了连接");
-            break;
-        } else if (recvLen == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            LOG_ERROR("recv failed: %s", strerror(errno));
-            break;
-        }
         char buf[40960];
         int len = read(fd, buf, 40960);
         if (len > 0) {
@@ -231,6 +226,17 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* chann
             LOG_ERROR("func = %s, 读取文件失败", __FUNCTION__);
             close(fd);
             return;
+        }
+
+        // 判断客户端是否已经关闭
+        char recvBuf[1];
+        int recvLen = recv(channel->fd(), recvBuf, sizeof recvBuf, MSG_PEEK | MSG_DONTWAIT);
+        if (recvLen == 0) {
+            LOG_DEBUG("HttpRequest::sendFile(), 对端关闭了连接");
+            break;
+        } else if (recvLen == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            LOG_ERROR("recv failed: %s", strerror(errno));
+            break;
         }
     }
 #else
