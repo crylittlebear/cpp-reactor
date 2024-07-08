@@ -206,19 +206,22 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* chann
     assert(fd > 0);
 #if 1
     while (1) {
-        //判断对端是否关闭
-        // char recvBuf[64];
-        // int recvLen = recv(channel->fd(), recvBuf, sizeof recvBuf, 0);
-        // if (recvLen == 0) {
-        //     break;
-        // }
+        char recvBuf[1];
+        int recvLen = recv(channel->fd(), recvBuf, sizeof recvBuf, MSG_PEEK | MSG_DONTWAIT);
+        if (recvLen == 0) {
+            LOG_DEBUG("HttpRequest::sendFile(), 对端关闭了连接");
+            break;
+        } else if (recvLen == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            LOG_ERROR("recv failed: %s", strerror(errno));
+            break;
+        }
         char buf[40960];
         int len = read(fd, buf, 40960);
         if (len > 0) {
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
             int sendLen = sendBuf->writeToFd(channel);
-            if (sendLen != len) {
+            if (sendLen == -1) {
                 break;
             }
 #endif
@@ -268,33 +271,6 @@ std::string toFormatTime(time_point<system_clock> tp) {
 
     return std::string(format_time);
 }
-
-// void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, int socket) {
-//     LOG_DEBUG("HttpRequest::sendDir()");
-// 	char buf[4096] = {0};
-// 	sprintf(buf, "<html><head><title>%s</title></head><body><table>", dirName.c_str());
-//     for (const auto& entry : std::filesystem::directory_iterator(dirName)) {
-//         auto name = entry.path().filename();
-//         auto time = entry.last_write_time();
-//         auto t = time.time_since_epoch();
-//         std::string lastModTime = toFormatTime(t);
-//         if (entry.is_directory()) {
-//             sprintf(buf + strlen(buf), 
-// 				 "<tr><td><a href=\"%s/\">%s</a></td><td>%d</td><td>%s</td></tr>", 
-// 				 name.c_str(), name.c_str(), 0, lastModTime.c_str());
-//         } else {
-// 			sprintf(buf + strlen(buf), 
-// 				 "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td><td>%s</td></tr>", 
-// 				 name.c_str(), name.c_str(), entry.file_size(), lastModTime.c_str());            
-//         }
-//         sendBuf->append(buf);
-//         sendBuf->writeToFd(socket);
-//         memset(buf, 0, sizeof(buf));
-//     }
-//     sprintf(buf, "</table></body></html>");
-//     sendBuf->append(buf);
-//     sendBuf->writeToFd(socket);
-// }
 
 void HttpRequest::sendDir(std::string dirName, Buffer* sendBuf, Channel* channel) {
     LOG_DEBUG("HttpRequest::sendDir(), 开始发送目录信息");

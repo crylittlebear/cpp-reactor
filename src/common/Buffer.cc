@@ -92,22 +92,52 @@ ssize_t Buffer::readFromFd(int fd) {
     return len;
 }
 
+// ssize_t Buffer::writeToFd(Channel* channel) {
+//     int totalLen = 0;
+//     int fd = channel->fd();
+//     while (readableSise() > 0) {
+//         auto len = send(fd, readPtr(), readableSise(), MSG_NOSIGNAL);
+//         if (len > 0) {
+//             // LOG_DEBUG("Buffer::writeToFd(), 成功发送 %d 字节的数据", (int)len);
+//             readPos_ += len;
+//             totalLen += len;
+//         } 
+//         else {
+//             break;
+//         }
+//     }
+//     return totalLen;
+// }
+
 ssize_t Buffer::writeToFd(Channel* channel) {
     int totalLen = 0;
     int fd = channel->fd();
     while (readableSise() > 0) {
         auto len = send(fd, readPtr(), readableSise(), MSG_NOSIGNAL);
         if (len > 0) {
-            // LOG_DEBUG("Buffer::writeToFd(), 成功发送 %d 字节的数据", (int)len);
             readPos_ += len;
             totalLen += len;
         } 
-        // else {
-        //     break;
-        // }
+        else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // 套接字不可写，稍后再试
+                break;
+            } 
+            else if (errno == EPIPE || errno == ECONNRESET) {
+                // 对端关闭连接
+                LOG_ERROR("Connection closed by peer");
+                return -1; // 发送失败，返回 -1
+            } 
+            else {
+                // 其他错误
+                LOG_ERROR("send failed: %s", strerror(errno));
+                return -1; // 发送失败，返回 -1
+            }
+        }
     }
     return totalLen;
 }
+
 
 std::string Buffer::retriveHttpLine() {
     std::string_view sv(readPtr(), readableSise());
