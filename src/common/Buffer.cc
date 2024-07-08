@@ -121,7 +121,7 @@ ssize_t Buffer::writeToFd(Channel* channel) {
         else {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // 套接字不可写，稍后再试
-                break;
+                continue;
             } 
             else if (errno == EPIPE || errno == ECONNRESET) {
                 // 对端关闭连接

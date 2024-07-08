@@ -209,18 +209,23 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* chann
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 #if 1
+    char buf[40960];
+    // int totalSendLen = 0;
+    // int totalReadLen = 0;
     while (1) {
-        char buf[40960];
         int len = read(fd, buf, 40960);
         if (len > 0) {
+            // totalReadLen += len;
             sendBuf->append(buf, len);
 #ifndef MSG_SEND_AUTO
             int sendLen = sendBuf->writeToFd(channel);
+            // totalSendLen += sendLen;
             if (sendLen == -1) {
                 break;
             }
 #endif
         } else if (len == 0) {
+            LOG_DEBUG("HttpRequest::sendFile(), 文件读取完毕");
             break;
         } else {
             LOG_ERROR("func = %s, 读取文件失败", __FUNCTION__);
@@ -253,6 +258,8 @@ void HttpRequest::sendFile(std::string fileName, Buffer* sendBuf, Channel* chann
 #endif
     close(fd);
     LOG_DEBUG("HttpRequest::sendFile(), 文件发送完毕");
+    // LOG_DEBUG("HttpRequest::sendFile(), 共发送 %d 字节的数据", totalSendLen);
+    // LOG_DEBUG("HttpRequest::sendFile(), 共读取了 %d 字节的数据", totalReadLen);
 }
 
 std::string toFormatTime(time_point<system_clock> tp) {
